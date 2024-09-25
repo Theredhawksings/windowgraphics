@@ -87,10 +87,8 @@ GLvoid Keyboard(unsigned char key, int x, int y)
             break;
         }
         case 't':{
-            timer = !timer;
-            if (timer) {
-                glutTimerFunc(100, TimerFunction, 1);
-            }
+            timer = true;
+            glutTimerFunc(100, TimerFunction, 1); 
             break;
         }
         case 's': {
