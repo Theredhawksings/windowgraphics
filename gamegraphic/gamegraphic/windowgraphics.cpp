@@ -29,6 +29,24 @@ double rectagleR4 = 195;
 double rectagleG4 = 151;
 double rectagleB4 = 161;
 
+GLvoid Mouse(int button, int state, int x, int y)
+{
+    if (button == GLUT_LEFT_BUTTON && state == GLUT_DOWN) {
+
+        if (x > 100 && x < 300 && y>75 && y < 325) {
+            std::random_device rd;
+            std::mt19937 gen(rd());
+            std::uniform_int_distribution<int> dis(0, 255);
+
+            rectagleR1 = dis(gen);
+            rectagleG1 = dis(gen);
+            rectagleB1 = dis(gen);
+        }
+    }
+
+}
+
+
 GLvoid drawScene() {
     glClearColor(R / 255.f, G / 255.f, B / 255.f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
@@ -72,6 +90,7 @@ int main(int argc, char** argv) {
 
     glutDisplayFunc(drawScene);
     glutReshapeFunc(Reshape);
+    glutMouseFunc(Mouse);
     glutMainLoop();
 
 
