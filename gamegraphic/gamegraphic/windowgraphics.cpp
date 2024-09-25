@@ -4,8 +4,8 @@
 #include <GL/freeglut_ext.h>
 #include <random>
 
-double R = 255;
-double G = 255;
+double R = 0;
+double G = 0;
 double B = 0;
 
 bool timer = false;
@@ -28,6 +28,29 @@ double rectagleB3 = 61;
 double rectagleR4 = 195;
 double rectagleG4 = 151;
 double rectagleB4 = 161;
+
+double X11 = -1.0f;
+double Y11 = -0.0f;
+double X21 = 0.0f;
+double Y21 = 1.0f;
+
+double X12 = 0.0f;
+double Y12 = 0.0f;
+double X22 = 1.0f;
+double Y22 = 1.0f;
+
+double X13 = -1.0f;
+double Y13 = -1.0f;
+double X23 = 0.0f;
+double Y23 = 0.0f;
+
+double X14 = 0.0f;
+double Y14 = -1.0f;
+double X24 = 1.0f;
+double Y24 = -0.5f;
+
+
+
 
 void Rectange1changecolor() {
     std::random_device rd;
@@ -102,6 +125,7 @@ GLvoid Mouse(int button, int state, int x, int y)
         else {
             clearchangecolor();
         }
+
         glutPostRedisplay();
     }
 
@@ -112,21 +136,21 @@ GLvoid drawScene() {
     glClearColor(R / 255.f, G / 255.f, B / 255.f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
 
-    //왼쪽 하단 오른쪽 상단
     glColor3f(rectagleR1 / 255.f, rectagleG1 / 255.f, rectagleB1 / 255.f);
-    glRectf(X/-0.2f, 0, 0, Y/0.2f);
+    glRectf(X11, Y11, X21, Y21);
 
     glColor3f(rectagleR2 / 255.f, rectagleG2 / 255.f, rectagleB2 / 255.f);
-    glRectf(0, 0, X/0.2f, Y/0.2f); 
+    glRectf(X12, Y12, X22, Y22);
 
     glColor3f(rectagleR3 / 255.f, rectagleG3 / 255.f, rectagleB3 / 255.f);
-    glRectf(X / -0.2f, Y / -0.2f, 0, 0);
+    glRectf(X13, Y13, X23, Y23);
 
     glColor3f(rectagleR4 / 255.f, rectagleG4 / 255.f, rectagleB4 / 255.f);
-    glRectf(0, Y/-0.2f, X/0.2f, 0);
+    glRectf(X14, Y14, X24, Y24);
 
     glutSwapBuffers();
 }
+
 
 GLvoid Reshape(int w, int h) {
     glViewport(0, 0, w, h);
