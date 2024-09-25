@@ -4,7 +4,7 @@
 #include <GL/freeglut_ext.h>
 #include <random>
 
-double R = 0;
+double R = 255;
 double G = 255;
 double B = 0;
 
@@ -29,19 +29,80 @@ double rectagleR4 = 195;
 double rectagleG4 = 151;
 double rectagleB4 = 161;
 
+void Rectange1changecolor() {
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<int> dis(0, 255);
+
+    rectagleR1 = dis(gen);
+    rectagleG1 = dis(gen);
+    rectagleB1 = dis(gen);
+};
+
+void Rectange2changecolor() {
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<int> dis(0, 255);
+
+    rectagleR2 = dis(gen);
+    rectagleG2 = dis(gen);
+    rectagleB2 = dis(gen);
+};
+
+void Rectange3changecolor() {
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<int> dis(0, 255);
+
+    rectagleR3 = dis(gen);
+    rectagleG3 = dis(gen);
+    rectagleB3 = dis(gen);
+};
+
+void Rectange4changecolor() {
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<int> dis(0, 255);
+
+    rectagleR4 = dis(gen);
+    rectagleG4 = dis(gen);
+    rectagleB4 = dis(gen);
+};
+
+void clearchangecolor() {
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<int> dis(0, 255);
+
+    R = dis(gen);
+    G = dis(gen);
+    B = dis(gen);
+};
+
 GLvoid Mouse(int button, int state, int x, int y)
 {
     if (button == GLUT_LEFT_BUTTON && state == GLUT_DOWN) {
 
         if (x > 100 && x < 300 && y>75 && y < 325) {
-            std::random_device rd;
-            std::mt19937 gen(rd());
-            std::uniform_int_distribution<int> dis(0, 255);
-
-            rectagleR1 = dis(gen);
-            rectagleG1 = dis(gen);
-            rectagleB1 = dis(gen);
+            Rectange1changecolor();
         }
+
+        if (x > 500 && x < 700 && y>75 && y < 325) {
+            Rectange2changecolor();
+        }
+
+        if (x > 100 && x < 300 && y>375 && y < 525) {
+            Rectange3changecolor();
+        }
+
+        if (x > 500 && x < 700 && y>375 && y < 525) {
+            Rectange4changecolor();
+        }
+
+        else {
+            clearchangecolor();
+        }
+        glutPostRedisplay();
     }
 
 }
