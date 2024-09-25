@@ -8,6 +8,8 @@ double R = 0;
 double G = 255;
 double B = 0;
 
+bool timer = false;
+
 GLvoid drawScene() {
     glClearColor(R/255.f,G/255.f,B/255.f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
@@ -16,6 +18,23 @@ GLvoid drawScene() {
 
 GLvoid Reshape(int w, int h) {
     glViewport(0, 0, w, h);
+}
+
+GLvoid TimerFunction(int value)
+{   
+    if (timer) {
+        
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<int> dis(0, 255);
+
+    R = dis(gen);
+    G = dis(gen);
+    B = dis(gen);
+    glutTimerFunc(100, TimerFunction, 1);
+    glutPostRedisplay();
+
+    }
 }
 
 GLvoid Keyboard(unsigned char key, int x, int y)
@@ -67,8 +86,29 @@ GLvoid Keyboard(unsigned char key, int x, int y)
             B = 0;
             break;
         }
+        case 't':{
+            timer = !timer;
+            if (timer) {
+                glutTimerFunc(100, TimerFunction, 1);
+            }
+            break;
+        }
+        case 's': {
+            timer = !timer;
+            break;
+        }
+        case 'q': {
+            glutLeaveMainLoop();  
+            exit(0);
+            break;
+        }
     }
     glutPostRedisplay();
+}
+
+
+void glutLeaveMainLoop() {
+
 }
 
 int main(int argc, char** argv) {
@@ -91,5 +131,8 @@ int main(int argc, char** argv) {
     glutReshapeFunc(Reshape); 
     glutKeyboardFunc(Keyboard);
     glutMainLoop();
+
+
+    return 0;
 }
 
