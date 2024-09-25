@@ -13,21 +13,37 @@ bool timer = false;
 #define X 800
 #define Y 600
 
+double rectagleR1 = 125;
+double rectagleG1 = 125;
+double rectagleB1 = 124;
+
+double rectagleR2 = 205;
+double rectagleG2 = 5;
+double rectagleB2 = 6;
+
+double rectagleR3 = 95;
+double rectagleG3 = 51;
+double rectagleB3 = 61;
+
+double rectagleR4 = 195;
+double rectagleG4 = 151;
+double rectagleB4 = 161;
+
 GLvoid drawScene() {
     glClearColor(R / 255.f, G / 255.f, B / 255.f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
 
     //왼쪽 하단 오른쪽 상단
-    glColor3f(1.0f, 0.0f, 0.0f);
+    glColor3f(rectagleR1 / 255.f, rectagleG1 / 255.f, rectagleB1 / 255.f);
     glRectf(X/-0.2f, 0, 0, Y/0.2f);
 
-    glColor3f(1.0f, 0.0f, 0.0f);
+    glColor3f(rectagleR2 / 255.f, rectagleG2 / 255.f, rectagleB2 / 255.f);
     glRectf(0, 0, X/0.2f, Y/0.2f); 
 
-    glColor3f(1.0f, 0.0f, 0.0f);
+    glColor3f(rectagleR3 / 255.f, rectagleG3 / 255.f, rectagleB3 / 255.f);
     glRectf(X / -0.2f, Y / -0.2f, 0, 0);
 
-    glColor3f(1.0f, 0.0f, 0.0f);
+    glColor3f(rectagleR4 / 255.f, rectagleG4 / 255.f, rectagleB4 / 255.f);
     glRectf(0, Y/-0.2f, X/0.2f, 0);
 
     glutSwapBuffers();
