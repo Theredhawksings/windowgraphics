@@ -108,24 +108,27 @@ GLvoid Mouse(int button, int state, int x, int y) {
 
     if (button == GLUT_LEFT_BUTTON && state == GLUT_DOWN) {
 
+        //(x1, y1) : 좌측 하단 좌표값
+        //(x2, y2) : 우측 상단 좌표값
+
         bool insideRectangle = false;  // 클릭이 사각형 안에 있었는지 여부
 
-        if (x > 100 && x < 300 && y > 75 && y < 235) {
+        if (x > X11 * 400 + 400 && x < X21 * 400 + 400 && y < (300 - (Y11 * 300)) && y > (300 - (Y21 * 300))) {
             Rectange1changecolor();
             insideRectangle = true;
         }
 
-        if (x > 500 && x < 700 && y > 75 && y < 235) {
+        if (x > X12 * 400 + 400 && x < X22 * 400 + 400 && y < (300 - (Y12 * 300)) && y > (300 - (Y22 * 300))) {
             Rectange2changecolor();
             insideRectangle = true;
         }
 
-        if (x > 100 && x < 300 && y > 375 && y < 525) {
+        if (x > X13 * 400 + 400 && x < X23 * 400 + 400 && y < (300 - (Y13 * 300)) && y > (300 - (Y23 * 300))) {
             Rectange3changecolor();
             insideRectangle = true;
         }
 
-        if (x > 500 && x < 700 && y > 375 && y < 525) {
+        if (x > X14 * 400 + 400 && x < X24 * 400 + 400 && y < (300 - (Y14 * 300)) && y > (300 - (Y24 * 300))) {
             Rectange4changecolor();
             insideRectangle = true;
         }
@@ -139,21 +142,26 @@ GLvoid Mouse(int button, int state, int x, int y) {
 
     if (button == GLUT_RIGHT_BUTTON && state == GLUT_DOWN) {
 
-        if (x > 100 && x < 300 && y > 75 && y < 325) { 
-            if (X11 < -0.85f) {
-                X11 += 0.01f;
-                Y11 += 0.01f;
-                X21 -= 0.01f;
-                Y21 -= 0.01f;
+        if (x >= -1.0f * 400 + 400 && x <= 0.0f * 400 + 400 && y < (300 - (0.0f * 300)) && y > (300 - (1.0f * 300))) {
+
+            if (x > X11 * 400 + 400 && x < X21 * 400 + 400 && y < (300 - (Y11 * 300)) && y >(300 - (Y21 * 300))) {
+                
+                if (X11 < -0.85f) {
+                    X11 += 0.01f;
+                    Y11 += 0.01f;
+                    X21 -= 0.01f;
+                    Y21 -= 0.01f;
+                }
+            }
+
+            else {
+                X11 -= 0.01f;
+                Y11 -= 0.01f;
+                X21 += 0.01f;
+                Y21 += 0.01f;
             }
         }
 
-        else if (x > 100 && x < 300 && y <= 75) {
-            X11 -= 0.01f;
-            Y11 -= 0.01f;
-            X21 += 0.01f;
-            Y21 += 0.01f;
-        }
 
 
         if (x > 500 && x < 700 && y > 75 && y < 325) { 
