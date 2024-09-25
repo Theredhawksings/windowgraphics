@@ -9,7 +9,7 @@ double G = 255;
 double B = 0;
 
 GLvoid drawScene() {
-    glClearColor(R/255.f,G / 255.f,B / 255.f, 1.0f);
+    glClearColor(R/255.f,G/255.f,B/255.f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
     glutSwapBuffers();
 }
@@ -51,6 +51,20 @@ GLvoid Keyboard(unsigned char key, int x, int y)
             R = dis(gen);
             G = dis(gen);
             B = dis(gen);
+            break;
+        }
+
+        case 'w': {
+            R = 255;
+            G = 255;
+            B = 255;
+            break;
+        }
+
+        case 'k': {
+            R = 0;
+            G = 0;
+            B = 0;
             break;
         }
     }
