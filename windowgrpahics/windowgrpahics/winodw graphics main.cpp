@@ -2,13 +2,14 @@
 #include <GL/glew.h>
 #include <GL/freeglut.h>
 #include <GL/freeglut_ext.h>
+#include <random>
 
-int R = 0;
-int G = 255;
-int B = 0;
+double R = 0;
+double G = 255;
+double B = 0;
 
 GLvoid drawScene() {
-    glClearColor(R,G,B, 1.0f);
+    glClearColor(R/255.f,G / 255.f,B / 255.f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
     glutSwapBuffers();
 }
@@ -25,18 +26,32 @@ GLvoid Keyboard(unsigned char key, int x, int y)
             R = 0;
             G = 255;
             B = 255;
+            break;
         }
 
         case 'm': {
             R = 255;
             G = 0;
             B = 255;
+            break;
         }
 
         case 'y': {
             R = 255;
             G = 255;
             B = 0;
+            break;
+        }
+
+        case 'a': {
+            std::random_device rd;
+            std::mt19937 gen(rd());
+            std::uniform_int_distribution<int> dis(0, 255);
+
+            R = dis(gen);
+            G = dis(gen);
+            B = dis(gen);
+            break;
         }
     }
     glutPostRedisplay();
