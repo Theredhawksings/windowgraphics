@@ -99,7 +99,6 @@ GLvoid Keyboard(unsigned char key, int x, int y)
         }
         case 'q': {
             glutLeaveMainLoop();  
-            exit(0);
             break;
         }
     }
@@ -107,11 +106,7 @@ GLvoid Keyboard(unsigned char key, int x, int y)
 }
 
 
-void glutLeaveMainLoop() {
-
-}
-
-int main(int argc, char** argv) {
+void main(int argc, char** argv) {
     glutInit(&argc, argv);
     glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGBA);
     glutInitWindowPosition(200, 200);
@@ -128,11 +123,9 @@ int main(int argc, char** argv) {
     }
 
     glutDisplayFunc(drawScene);
-    glutReshapeFunc(Reshape); 
+    glutReshapeFunc(Reshape);
     glutKeyboardFunc(Keyboard);
     glutMainLoop();
 
-
-    return 0;
 }
 
