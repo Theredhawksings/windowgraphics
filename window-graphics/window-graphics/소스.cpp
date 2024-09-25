@@ -4,7 +4,7 @@
 #include <GL/freeglut_ext.h>
 #include <random>
 
-#pragma comment(lib, "glew32.lib")
+//pragma comment(lib, "glew32.lib")
 
 double R = 0;
 double G = 0;
