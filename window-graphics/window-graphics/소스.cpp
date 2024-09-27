@@ -1,268 +1,178 @@
-#include <iostream>
 #include <GL/glew.h>
 #include <GL/freeglut.h>
-#include <GL/freeglut_ext.h>
+#include <vector>
 #include <random>
+#include <algorithm>
 
-//pragma comment(lib, "glew32.lib")
-
-double R = 0;
-double G = 0;
-double B = 0;
-
-bool timer = false;
-
-#define X 800
-#define Y 600
-
-double rectagleR1 = 125;
-double rectagleG1 = 125;
-double rectagleB1 = 124;
-
-double rectagleR2 = 205;
-double rectagleG2 = 5;
-double rectagleB2 = 6;
-
-double rectagleR3 = 95;
-double rectagleG3 = 51;
-double rectagleB3 = 61;
-
-double rectagleR4 = 195;
-double rectagleG4 = 151;
-double rectagleB4 = 161;
-
-double X11 = -1.0f;
-double Y11 = 0.0f;
-double X21 = 0.0f;
-double Y21 = 1.0f;
-
-double X12 = 0.0f;
-double Y12 = 0.0f;
-double X22 = 1.0f;
-double Y22 = 1.0f;
-
-double X13 = -1.0f;
-double Y13 = -1.0f;
-double X23 = 0.0f;
-double Y23 = 0.0f;
-
-double X14 = 0.0f;
-double Y14 = -1.0f;
-double X24 = 1.0f;
-double Y24 = 0.0f;
-
-
-void Rectange1changecolor() {
-    std::random_device rd;
-    std::mt19937 gen(rd());
-    std::uniform_int_distribution<int> dis(0, 255);
-
-    rectagleR1 = dis(gen);
-    rectagleG1 = dis(gen);
-    rectagleB1 = dis(gen);
+struct Rectangles{
+    float x, y, width, height;
+    float r, g, b;
+    bool selected;
 };
 
-void Rectange2changecolor() {
-    std::random_device rd;
-    std::mt19937 gen(rd());
-    std::uniform_int_distribution<int> dis(0, 255);
+std::vector<Rectangles> rectangles;
+int windowWidth = 800, windowHeight = 600;
+bool isDragging = false;
+int dragIndex = -1;
+float dragOffsetX, dragOffsetY;
 
-    rectagleR2 = dis(gen);
-    rectagleG2 = dis(gen);
-    rectagleB2 = dis(gen);
-};
+// Random number generator
+std::random_device rd;
+std::mt19937 gen(rd());
+std::uniform_real_distribution<> dis(0, 1);
 
-void Rectange3changecolor() {
-    std::random_device rd;
-    std::mt19937 gen(rd());
-    std::uniform_int_distribution<int> dis(0, 255);
-
-    rectagleR3 = dis(gen);
-    rectagleG3 = dis(gen);
-    rectagleB3 = dis(gen);
-};
-
-void Rectange4changecolor() {
-    std::random_device rd;
-    std::mt19937 gen(rd());
-    std::uniform_int_distribution<int> dis(0, 255);
-
-    rectagleR4 = dis(gen);
-    rectagleG4 = dis(gen);
-    rectagleB4 = dis(gen);
-};
-
-void clearchangecolor() {
-    std::random_device rd;
-    std::mt19937 gen(rd());
-    std::uniform_int_distribution<int> dis(0, 255);
-
-    R = dis(gen);
-    G = dis(gen);
-    B = dis(gen);
-};
-
-GLvoid Mouse(int button, int state, int x, int y) {
-
-    if (button == GLUT_LEFT_BUTTON && state == GLUT_DOWN) {
-
-        //(x1, y1) : 좌측 하단 좌표값
-        //(x2, y2) : 우측 상단 좌표값
-
-        bool insideRectangle = false;  // 클릭이 사각형 안에 있었는지 여부
-
-        if (x > X11 * 400 + 400 && x < X21 * 400 + 400 && y < (300 - (Y11 * 300)) && y > (300 - (Y21 * 300))) {
-            Rectange1changecolor();
-            insideRectangle = true;
-        }
-
-        if (x > X12 * 400 + 400 && x < X22 * 400 + 400 && y < (300 - (Y12 * 300)) && y > (300 - (Y22 * 300))) {
-            Rectange2changecolor();
-            insideRectangle = true;
-        }
-
-        if (x > X13 * 400 + 400 && x < X23 * 400 + 400 && y < (300 - (Y13 * 300)) && y > (300 - (Y23 * 300))) {
-            Rectange3changecolor();
-            insideRectangle = true;
-        }
-
-        if (x > X14 * 400 + 400 && x < X24 * 400 + 400 && y < (300 - (Y14 * 300)) && y > (300 - (Y24 * 300))) {
-            Rectange4changecolor();
-            insideRectangle = true;
-        }
-
-        if (!insideRectangle) {
-            clearchangecolor();
-        }
-
-        glutPostRedisplay();
-    }
-
-    if (button == GLUT_RIGHT_BUTTON && state == GLUT_DOWN) {
-
-        if (x >= -1.0f * 400 + 400 && x <= 0.0f * 400 + 400 && y < (300 - (0.0f * 300)) && y >(300 - (1.0f * 300))) {
-            if (x > X11 * 400 + 400 && x < X21 * 400 + 400 && y < (300 - (Y11 * 300)) && y >(300 - (Y21 * 300))) {
-                if (X11 < -0.85f) {
-                    X11 += 0.01f;
-                    Y11 += 0.01f;
-                    X21 -= 0.01f;
-                    Y21 -= 0.01f;
-                }
-            }
-            else {
-                X11 -= 0.01f;
-                Y11 -= 0.01f;
-                X21 += 0.01f;
-                Y21 += 0.01f;
-            }
-        }
-
-        if (x >= 0.0f * 400 + 400 && x <= 1.0f * 400 + 400 && y < (300 - (0.0f * 300)) && y >(300 - (1.0f * 300))) {
-            if (x > X12 * 400 + 400 && x < X22 * 400 + 400 && y < (300 - (Y12 * 300)) && y >(300 - (Y22 * 300))) {
-                if (X22 > 0.85f) {
-                    X12 += 0.01f;
-                    Y12 += 0.01f;
-                    X22 -= 0.01f;
-                    Y22 -= 0.01f;
-                }
-            }
-            else {
-                X12 -= 0.01f;
-                Y12 -= 0.01f;
-                X22 += 0.01f;
-                Y22 += 0.01f;
-            }
-        }
-
-        if (x >= -1.0f * 400 + 400 && x <= 0.0f * 400 + 400 && y > (300 - (0.0f * 300)) && y < (300 - (-1.0f * 300))) {
-            if (x > X13 * 400 + 400 && x < X23 * 400 + 400 && y < (300 - (Y13 * 300)) && y >(300 - (Y23 * 300))) {
-                if (X13 < -0.85f) {
-                    X13 += 0.01f;
-                    Y13 += 0.01f;
-                    X23 -= 0.01f;
-                    Y23 -= 0.01f;
-                }
-            }
-            else {
-                X13 -= 0.01f;
-                Y13 -= 0.01f;
-                X23 += 0.01f;
-                Y23 += 0.01f;
-            }
-        }
-
-        if (x >= 0.0f * 400 + 400 && x <= 1.0f * 400 + 400 && y > (300 - (0.0f * 300)) && y < (300 - (-1.0f * 300))) {
-            if (x > X14 * 400 + 400 && x < X24 * 400 + 400 && y < (300 - (Y14 * 300)) && y >(300 - (Y24 * 300))) {
-                if (X24 > 0.85f) {
-                    X14 += 0.01f;
-                    Y14 += 0.01f;
-                    X24 -= 0.01f;
-                    Y24 -= 0.01f;
-                }
-            }
-            else {
-                X14 -= 0.01f;
-                Y14 -= 0.01f;
-                X24 += 0.01f;
-                Y24 += 0.01f;
-            }
-        }
-
-
-
-    }
-
-
-
+void drawRectangle(const Rectangles& rect) {
+    glColor3f(rect.r, rect.g, rect.b);
+    glBegin(GL_QUADS);
+    glVertex2f(rect.x, rect.y);
+    glVertex2f(rect.x + rect.width, rect.y);
+    glVertex2f(rect.x + rect.width, rect.y + rect.height);
+    glVertex2f(rect.x, rect.y + rect.height);
+    glEnd();
 }
 
-
-GLvoid drawScene() {
-    glClearColor(R / 255.f, G / 255.f, B / 255.f, 1.0f);
+void display() {
     glClear(GL_COLOR_BUFFER_BIT);
 
-    glColor3f(rectagleR1 / 255.f, rectagleG1 / 255.f, rectagleB1 / 255.f);
-    glRectf(X11, Y11, X21, Y21);
-
-    glColor3f(rectagleR2 / 255.f, rectagleG2 / 255.f, rectagleB2 / 255.f);
-    glRectf(X12, Y12, X22, Y22);
-
-    glColor3f(rectagleR3 / 255.f, rectagleG3 / 255.f, rectagleB3 / 255.f);
-    glRectf(X13, Y13, X23, Y23);
-
-    glColor3f(rectagleR4 / 255.f, rectagleG4 / 255.f, rectagleB4 / 255.f);
-    glRectf(X14, Y14, X24, Y24);
+    for (const auto& rect : rectangles) {
+        drawRectangle(rect);
+    }
 
     glutSwapBuffers();
 }
 
-
-GLvoid Reshape(int w, int h) {
+void reshape(int w, int h) {
+    windowWidth = w;
+    windowHeight = h;
     glViewport(0, 0, w, h);
+    glMatrixMode(GL_PROJECTION);
+    glLoadIdentity();
+    gluOrtho2D(0, w, 0, h);
+    glMatrixMode(GL_MODELVIEW);
 }
 
+void createRandomRectangle() {
+    if (rectangles.size() >= 10) return;
+
+    Rectangles rect;
+    rect.width = 50 + dis(gen) * 50;
+    rect.height = 50 + dis(gen) * 50;
+    rect.x = dis(gen) * (windowWidth - rect.width);
+    rect.y = dis(gen) * (windowHeight - rect.height);
+    rect.r = dis(gen);
+    rect.g = dis(gen);
+    rect.b = dis(gen);
+    rect.selected = false;
+
+    rectangles.push_back(rect);
+    glutPostRedisplay();
+}
+
+int findRectangleAtPoint(int x, int y) {
+    for (int i = rectangles.size() - 1; i >= 0; --i) {
+        const auto& rect = rectangles[i];
+        if (x >= rect.x && x <= rect.x + rect.width &&
+            y >= rect.y && y <= rect.y + rect.height) {
+            return i;
+        }
+    }
+    return -1;
+}
+
+void mergeTouchingRectangles() {
+    bool merged;
+    do {
+        merged = false;
+        for (size_t i = 0; i < rectangles.size(); ++i) {
+            for (size_t j = i + 1; j < rectangles.size(); ++j) {
+                auto& rect1 = rectangles[i];
+                auto& rect2 = rectangles[j];
+
+                if (rect1.x < rect2.x + rect2.width && rect1.x + rect1.width > rect2.x &&
+                    rect1.y < rect2.y + rect2.height && rect1.y + rect1.height > rect2.y) {
+                    // Merge rectangles
+                    float minX = std::min(rect1.x, rect2.x);
+                    float minY = std::min(rect1.y, rect2.y);
+                    float maxX = std::max(rect1.x + rect1.width, rect2.x + rect2.width);
+                    float maxY = std::max(rect1.y + rect1.height, rect2.y + rect2.height);
+
+                    rect1.x = minX;
+                    rect1.y = minY;
+                    rect1.width = maxX - minX;
+                    rect1.height = maxY - minY;
+                    rect1.r = dis(gen);
+                    rect1.g = dis(gen);
+                    rect1.b = dis(gen);
+
+                    rectangles.erase(rectangles.begin() + j);
+                    merged = true;
+                    break;
+                }
+            }
+            if (merged) break;
+        }
+    } while (merged);
+}
+
+void mouse(int button, int state, int x, int y) {
+    y = windowHeight - y;  // Invert y coordinate
+
+    if (button == GLUT_LEFT_BUTTON) {
+        if (state == GLUT_DOWN) {
+            dragIndex = findRectangleAtPoint(x, y);
+            if (dragIndex != -1) {
+                isDragging = true;
+                dragOffsetX = x - rectangles[dragIndex].x;
+                dragOffsetY = y - rectangles[dragIndex].y;
+
+                Rectangles selectedRect = rectangles[dragIndex];
+                rectangles.erase(rectangles.begin() + dragIndex);
+                rectangles.push_back(selectedRect);
+                dragIndex = rectangles.size() - 1;
+            }
+        }
+        else if (state == GLUT_UP) {
+            if (isDragging) {
+                isDragging = false;
+                mergeTouchingRectangles();
+                glutPostRedisplay();
+            }
+        }
+    }
+}
+
+void motion(int x, int y) {
+    y = windowHeight - y;  // Invert y coordinate
+
+    if (isDragging && dragIndex != -1) {
+        rectangles[dragIndex].x = x - dragOffsetX;
+        rectangles[dragIndex].y = y - dragOffsetY;
+        glutPostRedisplay();
+    }
+}
+
+void keyboard(unsigned char key, int x, int y) {
+    if (key == 'a' || key == 'A') {
+        createRandomRectangle();
+    }
+}
 
 int main(int argc, char** argv) {
     glutInit(&argc, argv);
     glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGBA);
-    glutInitWindowPosition(200, 200);
-    glutInitWindowSize(800, 600);
-    glutCreateWindow("Example1");
+    glutInitWindowSize(windowWidth, windowHeight);
+    glutCreateWindow("Rectangle Manipulation");
 
-    glewExperimental = GL_TRUE;
-    if (glewInit() != GLEW_OK) {
-        std::cerr << "Unable to initialize GLEW" << std::endl;
-        exit(EXIT_FAILURE);
-    }
-    else {
-        std::cout << "GLEW Initialized\n";
-    }
+    glewInit();
 
-    glutDisplayFunc(drawScene);
-    glutReshapeFunc(Reshape);
-    glutMouseFunc(Mouse);
+    glutDisplayFunc(display);
+    glutReshapeFunc(reshape);
+    glutMouseFunc(mouse);
+    glutMotionFunc(motion);
+    glutKeyboardFunc(keyboard);
+
+    glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+
     glutMainLoop();
-
-
     return 0;
 }
