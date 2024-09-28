@@ -3,23 +3,43 @@
 #include <vector>
 #include <random>
 #include <algorithm>
+#include <iostream>
 
-struct Rectangles{
+using namespace std;
+
+
+random_device rd;
+mt19937 gen(rd());
+uniform_real_distribution<> dis(0, 1);
+
+int windowWidth = 800, windowHeight = 600;
+
+struct Rectangles {
     float x, y, width, height;
     float r, g, b;
-    bool selected;
 };
 
-std::vector<Rectangles> rectangles;
-int windowWidth = 800, windowHeight = 600;
-bool isDragging = false;
-int dragIndex = -1;
-float dragOffsetX, dragOffsetY;
+vector<Rectangles> rectangles;
 
-// Random number generator
-std::random_device rd;
-std::mt19937 gen(rd());
-std::uniform_real_distribution<> dis(0, 1);
+void createRandomRectangle(int x, int y) {
+    if (rectangles.size() >= 5) return;
+
+    Rectangles rect;
+    rect.width = 0.2f;  // 사각형의 크기를 적절히 설정
+    rect.height = 0.2f;
+
+    // 좌표 변환 (OpenGL 좌표로 변환)
+    rect.x = (2.0f * x) / windowWidth - 1.0f;  // -1 ~ 1 범위로 변환
+    rect.y = 1.0f - (2.0f * y) / windowHeight; // y 좌표를 반전
+
+    rect.r = dis(gen);  // 랜덤 색상
+    rect.g = dis(gen);
+    rect.b = dis(gen);
+
+    rectangles.push_back(rect);
+    glutPostRedisplay();
+}
+
 
 void drawRectangle(const Rectangles& rect) {
     glColor3f(rect.r, rect.g, rect.b);
@@ -31,148 +51,52 @@ void drawRectangle(const Rectangles& rect) {
     glEnd();
 }
 
-void display() {
+GLvoid drawScene() {
+    glClearColor(105 / 255.f, 105 / 255.f, 105 / 255.f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
 
     for (const auto& rect : rectangles) {
         drawRectangle(rect);
     }
 
+
     glutSwapBuffers();
 }
 
-void reshape(int w, int h) {
-    windowWidth = w;
-    windowHeight = h;
+GLvoid Reshape(int w, int h) {
     glViewport(0, 0, w, h);
-    glMatrixMode(GL_PROJECTION);
-    glLoadIdentity();
-    gluOrtho2D(0, w, 0, h);
-    glMatrixMode(GL_MODELVIEW);
 }
 
-void createRandomRectangle() {
-    if (rectangles.size() >= 10) return;
+GLvoid Mouse(int button, int state, int x, int y) {
 
-    Rectangles rect;
-    rect.width = 50 + dis(gen) * 50;
-    rect.height = 50 + dis(gen) * 50;
-    rect.x = dis(gen) * (windowWidth - rect.width);
-    rect.y = dis(gen) * (windowHeight - rect.height);
-    rect.r = dis(gen);
-    rect.g = dis(gen);
-    rect.b = dis(gen);
-    rect.selected = false;
-
-    rectangles.push_back(rect);
-    glutPostRedisplay();
-}
-
-int findRectangleAtPoint(int x, int y) {
-    for (int i = rectangles.size() - 1; i >= 0; --i) {
-        const auto& rect = rectangles[i];
-        if (x >= rect.x && x <= rect.x + rect.width &&
-            y >= rect.y && y <= rect.y + rect.height) {
-            return i;
-        }
-    }
-    return -1;
-}
-
-void mergeTouchingRectangles() {
-    bool merged;
-    do {
-        merged = false;
-        for (size_t i = 0; i < rectangles.size(); ++i) {
-            for (size_t j = i + 1; j < rectangles.size(); ++j) {
-                auto& rect1 = rectangles[i];
-                auto& rect2 = rectangles[j];
-
-                if (rect1.x < rect2.x + rect2.width && rect1.x + rect1.width > rect2.x &&
-                    rect1.y < rect2.y + rect2.height && rect1.y + rect1.height > rect2.y) {
-                    // Merge rectangles
-                    float minX = std::min(rect1.x, rect2.x);
-                    float minY = std::min(rect1.y, rect2.y);
-                    float maxX = std::max(rect1.x + rect1.width, rect2.x + rect2.width);
-                    float maxY = std::max(rect1.y + rect1.height, rect2.y + rect2.height);
-
-                    rect1.x = minX;
-                    rect1.y = minY;
-                    rect1.width = maxX - minX;
-                    rect1.height = maxY - minY;
-                    rect1.r = dis(gen);
-                    rect1.g = dis(gen);
-                    rect1.b = dis(gen);
-
-                    rectangles.erase(rectangles.begin() + j);
-                    merged = true;
-                    break;
-                }
-            }
-            if (merged) break;
-        }
-    } while (merged);
-}
-
-void mouse(int button, int state, int x, int y) {
-    y = windowHeight - y;  // Invert y coordinate
-
-    if (button == GLUT_LEFT_BUTTON) {
-        if (state == GLUT_DOWN) {
-            dragIndex = findRectangleAtPoint(x, y);
-            if (dragIndex != -1) {
-                isDragging = true;
-                dragOffsetX = x - rectangles[dragIndex].x;
-                dragOffsetY = y - rectangles[dragIndex].y;
-
-                Rectangles selectedRect = rectangles[dragIndex];
-                rectangles.erase(rectangles.begin() + dragIndex);
-                rectangles.push_back(selectedRect);
-                dragIndex = rectangles.size() - 1;
-            }
-        }
-        else if (state == GLUT_UP) {
-            if (isDragging) {
-                isDragging = false;
-                mergeTouchingRectangles();
-                glutPostRedisplay();
-            }
-        }
+    if (button == GLUT_LEFT_BUTTON && state == GLUT_DOWN){
+        createRandomRectangle(x, y);
     }
 }
 
-void motion(int x, int y) {
-    y = windowHeight - y;  // Invert y coordinate
-
-    if (isDragging && dragIndex != -1) {
-        rectangles[dragIndex].x = x - dragOffsetX;
-        rectangles[dragIndex].y = y - dragOffsetY;
-        glutPostRedisplay();
-    }
-}
-
-void keyboard(unsigned char key, int x, int y) {
-    if (key == 'a' || key == 'A') {
-        createRandomRectangle();
-    }
+GLvoid keyboard(unsigned char key, int x, int y) {
+  
 }
 
 int main(int argc, char** argv) {
     glutInit(&argc, argv);
     glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGBA);
-    glutInitWindowSize(windowWidth, windowHeight);
-    glutCreateWindow("Rectangle Manipulation");
+    glutInitWindowPosition(200, 200);
+    glutInitWindowSize(800, 600);
+    glutCreateWindow("Example1");
 
-    glewInit();
+    glewExperimental = GL_TRUE;
+    if (glewInit() != GLEW_OK) {
+        std::cerr << "Unable to initialize GLEW" << std::endl;
+        exit(EXIT_FAILURE);
+    }
+    else {
+        std::cout << "GLEW Initialized\n";
+    }
 
-    glutDisplayFunc(display);
-    glutReshapeFunc(reshape);
-    glutMouseFunc(mouse);
-    glutMotionFunc(motion);
+    glutDisplayFunc(drawScene);
+    glutReshapeFunc(Reshape);
+    glutMouseFunc(Mouse);
     glutKeyboardFunc(keyboard);
-
-    glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
-
     glutMainLoop();
-    return 0;
 }
