@@ -14,15 +14,13 @@ uniform_real_distribution<> dis(0, 1);
 
 int windowWidth = 800, windowHeight = 600;
 
-bool timer1 = false;
-bool timer2 = false;
-bool timer3 = false;
-
+bool timer[4] = { false, false, false, false };
 
 struct Rectangles {
     float x, y, width, height;
     float r, g, b;
     float dx, dy;  
+    float originalX, originalY;  
 };
 
 vector<Rectangles> rectangles;
@@ -43,6 +41,9 @@ void createRandomRectangle(int x, int y) {
 
     rect.dx = 0.1f;  
     rect.dy = 0.1f;
+
+    rect.originalX = rect.x;
+    rect.originalY = rect.y;
 
     rectangles.push_back(rect);
     glutPostRedisplay();        
@@ -116,9 +117,8 @@ void zigzag() {
 
 void sizechange(){
 
-
     for (auto& rect : rectangles) {
-        // 기본 크기
+
         float originalWidth = 0.2f;
         float originalHeight = 0.2f;
 
@@ -126,24 +126,35 @@ void sizechange(){
         rect.height = originalHeight + (dis(gen) * 1.0f); 
     }
 
+}
 
+void colorchange() {
+
+    for (auto& rect : rectangles) {
+        rect.r = dis(gen);
+        rect.g = dis(gen);
+        rect.b = dis(gen);
+    }
 
 }
 
-GLvoid TimerFunction(int value){
-    if (timer1) {
+
+GLvoid TimerFunction(int value) {
+
+    if (timer[0]) {
         diagonal();
     }
-
-    if (timer2) {
+    if (timer[1]) {
         zigzag();
     }
-
-    if (timer3) {
+    if (timer[2]) {
         sizechange();
     }
+    if (timer[3]) {
+        colorchange();
+    }
 
-    glutTimerFunc(100, TimerFunction, 1);
+    glutTimerFunc(100, TimerFunction, value);
     glutPostRedisplay();
 }
 
@@ -152,35 +163,69 @@ GLvoid keyboard(unsigned char key, int x, int y) {
     switch (key) {
 
     case '1': {
-        timer1 = !timer1;
-
-        if (timer1) {
+        timer[0] = !timer[0];
+        if (timer[0]) {
             glutTimerFunc(100, TimerFunction, 1);
         }
         break;
     }
-    
-    case '2': {
-        timer2 = !timer2;
 
-        if (timer2) {
-            glutTimerFunc(100, TimerFunction, 1);
+    case '2': {
+        timer[1] = !timer[1];
+        if (timer[1]) {
+            glutTimerFunc(100, TimerFunction, 2);
         }
-       
         break;
     }
 
     case '3': {
-        timer3 = !timer3;
-
-        if (timer3) {
-            glutTimerFunc(100, TimerFunction, 1);
+        timer[2] = !timer[2];
+        if (timer[2]) {
+            glutTimerFunc(100, TimerFunction, 3);
         }
+        break;
+    }
 
+    case '4': {
+        timer[3] = !timer[3];
+        if (timer[3]) {
+            glutTimerFunc(100, TimerFunction, 4);
+        }
+        break;
+    }
+
+    case 's': {
+        for (auto& timers : timer) {
+            timers = false;
+        }
+        break;
+    }
+
+    case 'm': {
+        for (auto& rect : rectangles) {
+
+            float originalWidth = 0.2f;
+            float originalHeight = 0.2f;
+
+            rect.x = rect.originalX;
+            rect.y = rect.originalY;
+        }
+        break;
+    }
+    
+    case 'r':{
+        rectangles.clear();
+        glutPostRedisplay();
+        break;
+    }
+
+    case 'q': {
+        glutLeaveMainLoop();
         break;
     }
 
     }
+
 }
 
 int main(int argc, char** argv) {
