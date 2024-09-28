@@ -102,7 +102,8 @@ void mouse(int button, int state, int x, int y) {
                 rectangles[dragIndex].width /= 2;
                 rectangles[dragIndex].height /= 2;
             }
-            isDragging = false; 
+            isDragging = false;
+            dragIndex = -1;  
         }
     }
     glutPostRedisplay();
