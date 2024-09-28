@@ -2,33 +2,33 @@
 #include <GL/freeglut.h>
 #include <vector>
 #include <random>
-#include <algorithm>
 #include <iostream>
-#include <cstdlib> 
-#include <ctime>  
+#include <cstdlib>
+#include <ctime>
+
 using namespace std;
 
 int windowWidth = 800, windowHeight = 600;
 random_device rd;
 mt19937 gen(rd());
 uniform_real_distribution<> dis(0, 1);
-int dragIndex = -1;
-float dragOffsetX, dragOffsetY;
 bool isDragging = false;
+
 
 struct Rectangles {
     float x, y, width, height;
     float r, g, b;
 };
 
+Rectangles eraser; 
 vector<Rectangles> rectangles;
 
-float toGLX(int x) {
-    return (x / static_cast<float>(windowWidth)) * 2.0f - 1.0f;
-}
+void createRandomRectangle(int count);  // 프로토타입 선언
 
-float toGLY(int y) {
-    return 1.0f - (y / static_cast<float>(windowHeight)) * 2.0f;
+void randomRectangle() {
+    srand(static_cast<unsigned int>(time(0)));
+    int a = 20 + rand() % 21;
+    createRandomRectangle(a);
 }
 
 void drawRectangle(const Rectangles& rect) {
@@ -44,8 +44,8 @@ void drawRectangle(const Rectangles& rect) {
 void createRandomRectangle(int count) {
     for (int i = 0; i < count; i++) {
         Rectangles rect;
-        rect.width = dis(gen) * 0.1f + 0.1f;  // Changed from 0.0f to 0.1f
-        rect.height = dis(gen) * 0.1f + 0.1f;  // Changed from 0.0f to 0.1f
+        rect.width = 0.1f;
+        rect.height = 0.1f;
         rect.x = dis(gen) * 2.0f - 1.0f;
         rect.y = dis(gen) * 2.0f - 1.0f;
         rect.r = dis(gen);
@@ -62,6 +62,11 @@ GLvoid drawScene() {
     for (const auto& rect : rectangles) {
         drawRectangle(rect);
     }
+
+    if (isDragging) {
+        drawRectangle(eraser); 
+    }
+
     glutSwapBuffers();
 }
 
@@ -71,15 +76,16 @@ GLvoid Reshape(int w, int h) {
     glViewport(0, 0, w, h);
 }
 
-int findRectangleAtPoint(float x, float y) {
-    for (int i = rectangles.size() - 1; i >= 0; i--) {  // Changed loop direction
-        const auto& rect = rectangles[i];
-        if (x >= rect.x && x <= rect.x + rect.width &&
-            y >= rect.y && y <= rect.y + rect.height) {
-            return i;
-        }
-    }
-    return -1;
+float toGLX(int x) {
+    return (x / 400.0f) - 1.0f;
+}
+
+float toGLY(int y) {
+    return -(y / 300.0f) + 1.0f;//https://stackoverflow.com/questions/33851030/convert-glut-mouse-coordinates-to-opengl
+}
+
+bool isOverlapping(const Rectangles& r1, const Rectangles& r2) {
+    return r1.x < r2.x + r2.width && r1.x + r1.width > r2.x && r1.y < r2.y + r2.height && r1.y + r1.height > r2.y;//AABB 충돌 https://mathmakeworld.tistory.com/106
 }
 
 void mouse(int button, int state, int x, int y) {
@@ -88,74 +94,74 @@ void mouse(int button, int state, int x, int y) {
 
     if (button == GLUT_LEFT_BUTTON) {
         if (state == GLUT_DOWN) {
-            dragIndex = findRectangleAtPoint(glX, glY);
-            if (dragIndex != -1) {
-                isDragging = true;
-                dragOffsetX = glX - rectangles[dragIndex].x;
-                dragOffsetY = glY - rectangles[dragIndex].y;
-                rectangles[dragIndex].width *= 2;
-                rectangles[dragIndex].height *= 2;
-            }
+            eraser.x = glX - 0.1f; 
+            eraser.y = glY - 0.1f;
+            eraser.width = 0.2f; 
+            eraser.height = 0.2f;
+            eraser.r = 0.0f; 
+            eraser.g = 0.0f;
+            eraser.b = 0.0f;
+
+            isDragging = true; 
         }
         else if (state == GLUT_UP) {
-            if (isDragging && dragIndex != -1) {
-                rectangles[dragIndex].width /= 2;
-                rectangles[dragIndex].height /= 2;
-            }
-            isDragging = false;
-            dragIndex = -1;  
+            isDragging = false;  
         }
     }
+
     glutPostRedisplay();
 }
 
-void motion(int x, int y) {
-    if (isDragging && dragIndex != -1) {
+GLvoid motion(int x, int y) {
+    if (isDragging) {
         float glX = toGLX(x);
         float glY = toGLY(y);
 
-        for (int i = 0; i < rectangles.size(); i++) {
-            if (dragIndex != i) {
-                bool overlapX = rectangles[dragIndex].x < rectangles[i].x + rectangles[i].width &&
-                    rectangles[dragIndex].x + rectangles[dragIndex].width > rectangles[i].x;
-                bool overlapY = rectangles[dragIndex].y < rectangles[i].y + rectangles[i].height &&
-                    rectangles[dragIndex].y + rectangles[dragIndex].height > rectangles[i].y;
+        eraser.x = glX - eraser.width / 2; 
+        eraser.y = glY - eraser.height / 2;
 
-                if (overlapX && overlapY) {
-                    rectangles[dragIndex].r = rectangles[i].r;
-                    rectangles[dragIndex].g = rectangles[i].g;
-                    rectangles[dragIndex].b = rectangles[i].b;
+        for (int i = rectangles.size() - 1; i >= 0; i--) {
+            if (isOverlapping(eraser, rectangles[i])) {
+                eraser.r = rectangles[i].r;
+                eraser.g = rectangles[i].g;
+                eraser.b = rectangles[i].b;
 
-                    rectangles.erase(rectangles.begin() + i);
+                eraser.width += 0.02f;
+                eraser.height += 0.02f;
 
-                    if (i < dragIndex) {
-                        dragIndex--; 
-                    }
-
-                    break;
-                }
+                rectangles.erase(rectangles.begin() + i);
             }
-        }
-
-        if (dragIndex < rectangles.size()) {  
-            rectangles[dragIndex].x = glX - dragOffsetX;
-            rectangles[dragIndex].y = glY - dragOffsetY;
-        }
-        else {
-            isDragging = false;
-            dragIndex = -1;
         }
 
         glutPostRedisplay();
     }
 }
 
+GLvoid Keyboard(unsigned char key, int x, int y){
+
+    switch (key) {
+
+    case 'r': {
+        rectangles.clear();
+        randomRectangle();
+        break;
+    }
+
+    case 'q': {
+        glutLeaveMainLoop();
+        break;
+    }
+
+    }
+}
+
+
 int main(int argc, char** argv) {
     glutInit(&argc, argv);
     glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGBA);
     glutInitWindowPosition(200, 200);
     glutInitWindowSize(windowWidth, windowHeight);
-    glutCreateWindow("Draggable Rectangles");
+    glutCreateWindow("Eraser Rectangle");
 
     glewExperimental = GL_TRUE;
     if (glewInit() != GLEW_OK) {
@@ -166,14 +172,13 @@ int main(int argc, char** argv) {
         std::cout << "GLEW Initialized\n";
     }
 
-    srand(static_cast<unsigned int>(time(0)));
-    int a = 20 + rand() % 21;
-    createRandomRectangle(a);
+    randomRectangle();
 
     glutDisplayFunc(drawScene);
     glutReshapeFunc(Reshape);
     glutMouseFunc(mouse);
     glutMotionFunc(motion);
+    glutKeyboardFunc(Keyboard);
     glutMainLoop();
 
     return 0;
