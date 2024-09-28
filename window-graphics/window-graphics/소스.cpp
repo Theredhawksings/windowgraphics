@@ -68,7 +68,6 @@ GLvoid drawScene() {
         drawRectangle(rect);
     }
 
-
     glutSwapBuffers();
 }
 
@@ -204,11 +203,11 @@ GLvoid keyboard(unsigned char key, int x, int y) {
     case 'm': {
         for (auto& rect : rectangles) {
 
-            float originalWidth = 0.2f;
-            float originalHeight = 0.2f;
-
             rect.x = rect.originalX;
             rect.y = rect.originalY;
+
+            rect.width = 0.2f;
+            rect.height = 0.2f;
         }
         break;
     }
