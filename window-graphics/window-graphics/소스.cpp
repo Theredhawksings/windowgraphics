@@ -14,9 +14,15 @@ uniform_real_distribution<> dis(0, 1);
 
 int windowWidth = 800, windowHeight = 600;
 
+bool timer1 = false;
+bool timer2 = false;
+bool timer3 = false;
+
+
 struct Rectangles {
     float x, y, width, height;
     float r, g, b;
+    float dx, dy;  
 };
 
 vector<Rectangles> rectangles;
@@ -25,19 +31,21 @@ void createRandomRectangle(int x, int y) {
     if (rectangles.size() >= 5) return;
 
     Rectangles rect;
-    rect.width = 0.2f;  // 사각형의 크기를 적절히 설정
-    rect.height = 0.2f;
+    rect.width = 0.2f;  
+    rect.height = 0.2f; 
 
-    // 좌표 변환 (OpenGL 좌표로 변환)
-    rect.x = (2.0f * x) / windowWidth - 1.0f;  // -1 ~ 1 범위로 변환
-    rect.y = 1.0f - (2.0f * y) / windowHeight; // y 좌표를 반전
+    rect.x = (2.0f * x) / windowWidth - 1.0f - rect.width / 2.0f;  
+    rect.y = 1.0f - (2.0f * y) / windowHeight - rect.height / 2.0f; 
 
-    rect.r = dis(gen);  // 랜덤 색상
+    rect.r = dis(gen);
     rect.g = dis(gen);
     rect.b = dis(gen);
 
+    rect.dx = 0.1f;  
+    rect.dy = 0.1f;
+
     rectangles.push_back(rect);
-    glutPostRedisplay();
+    glutPostRedisplay();        
 }
 
 
@@ -74,8 +82,105 @@ GLvoid Mouse(int button, int state, int x, int y) {
     }
 }
 
-GLvoid keyboard(unsigned char key, int x, int y) {
+void diagonal() {
+
+    for (auto& rect : rectangles) {
+            rect.x += rect.dx;
+            rect.y += rect.dy;
+
+            if (rect.x <= -1.0f || rect.x + rect.width >= 1.0f) {
+                rect.dx = -rect.dx;
+            }
+            if (rect.y <= -1.0f || rect.y + rect.height >= 1.0f) {
+                rect.dy = -rect.dy;
+            }
+     }
+
+    
+}
+
+void zigzag() {
+
+
+    for (auto& rect : rectangles) {
+        rect.x += rect.dx;
+
+        if (rect.x <= -1.0f || rect.x + rect.width >= 1.0f) {
+            rect.dx = -rect.dx;
+        }
   
+    }
+
+    
+}
+
+void sizechange(){
+
+
+    for (auto& rect : rectangles) {
+        // 기본 크기
+        float originalWidth = 0.2f;
+        float originalHeight = 0.2f;
+
+        rect.width = originalWidth + (dis(gen) * 1.0f);  
+        rect.height = originalHeight + (dis(gen) * 1.0f); 
+    }
+
+
+
+}
+
+GLvoid TimerFunction(int value){
+    if (timer1) {
+        diagonal();
+    }
+
+    if (timer2) {
+        zigzag();
+    }
+
+    if (timer3) {
+        sizechange();
+    }
+
+    glutTimerFunc(100, TimerFunction, 1);
+    glutPostRedisplay();
+}
+
+GLvoid keyboard(unsigned char key, int x, int y) {
+
+    switch (key) {
+
+    case '1': {
+        timer1 = !timer1;
+
+        if (timer1) {
+            glutTimerFunc(100, TimerFunction, 1);
+        }
+        break;
+    }
+    
+    case '2': {
+        timer2 = !timer2;
+
+        if (timer2) {
+            glutTimerFunc(100, TimerFunction, 1);
+        }
+       
+        break;
+    }
+
+    case '3': {
+        timer3 = !timer3;
+
+        if (timer3) {
+            glutTimerFunc(100, TimerFunction, 1);
+        }
+
+        break;
+    }
+
+    }
 }
 
 int main(int argc, char** argv) {
