@@ -50,11 +50,16 @@ void drawRectangle(const Rectangles& rect) {
 }
 
 void drawScene() {
+    glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
     for (const auto& rect : rectangles) {
         drawRectangle(rect);
     }
     glutSwapBuffers();
+}
+
+GLvoid Reshape(int w, int h) {
+    glViewport(0, 0, w, h);
 }
 
 float toGLX(int x) { return (x / 400.f) - 1.0f; }
@@ -83,6 +88,7 @@ void animateRectangles() {
             }
         }
     }
+    glutPostRedisplay();
 }
 
 void splitRectangle(int index, int animationType) {
@@ -161,9 +167,10 @@ int main(int argc, char** argv) {
     createRandomRectangle(rand() % 6 + 5);
 
     glutDisplayFunc(drawScene);
+    glutReshapeFunc(Reshape);
     glutMouseFunc(mouse);
-    glutIdleFunc([] { animateRectangles(); glutPostRedisplay(); });
-
+    glutIdleFunc(animateRectangles);
     glutMainLoop();
+
     return 0;
 }
