@@ -34,7 +34,7 @@ void createRandomRectangle(int count) {
         rect.r = dis(gen);
         rect.g = dis(gen);
         rect.b = dis(gen);
-        rect.animation = 1 + rand() % 4;
+        rect.animation = 1 + rand() % 3;
         rect.dx = 0.0f;
         rect.dy = 0.0f;
         rectangles.push_back(rect);
@@ -67,7 +67,6 @@ GLvoid drawScene() {
     }
 
     glutSwapBuffers();
-    glFlush(); // 추가
 }
 
 GLvoid Reshape(int w, int h) {
@@ -115,27 +114,51 @@ void animateRectangles() {
     }
 }
 
-
-void splitRectangle(int index) {
+void splitRectangle(int index, int animationumber) {
     Rectangles& rect = rectangles[index];
     float halfWidth = rect.width / 2.0f;
     float halfHeight = rect.height / 2.0f;
 
+    // 새로운 사각형들을 먼저 추가
     /*rectangles.push_back({ rect.x, rect.y, halfWidth, halfHeight, rect.r, rect.g, rect.b, 5, 0.0f, 1.0f });
     rectangles.push_back({ rect.x + halfWidth, rect.y, halfWidth, halfHeight, rect.r, rect.g, rect.b, 5, 1.0f, 0.0f });
     rectangles.push_back({ rect.x, rect.y + halfHeight, halfWidth, halfHeight, rect.r, rect.g, rect.b, 5, 0.0f, -1.0f });
     rectangles.push_back({ rect.x + halfWidth, rect.y + halfHeight, halfWidth, halfHeight, rect.r, rect.g, rect.b, 5, -1.0f, 0.0f });
 
-    rectangles.erase(rectangles.begin() + index); */
 
-    vector<Rectangles> newRects = {
-        { rect.x, rect.y, halfWidth, halfHeight, rect.r, rect.g, rect.b, 5, 0.0f, 1.0f },
-        { rect.x + halfWidth, rect.y, halfWidth, halfHeight, rect.r, rect.g, rect.b, 5, 1.0f, 0.0f },
-        { rect.x, rect.y + halfHeight, halfWidth, halfHeight, rect.r, rect.g, rect.b, 5, 0.0f, -1.0f },
-        { rect.x + halfWidth, rect.y + halfHeight, halfWidth, halfHeight, rect.r, rect.g, rect.b, 5, -1.0f, 0.0f }
-    };
-    rectangles.erase(rectangles.begin() + index);
-    rectangles.insert(rectangles.end(), newRects.begin(), newRects.end());
+    rectangles.erase(rectangles.begin() + index);*/
+    if (animationumber == 1) {
+        vector<Rectangles> newRects = {
+            { rect.x, rect.y, halfWidth, halfHeight, rect.r, rect.g, rect.b, 5, -1.0f, 0.0f },
+            { rect.x + halfWidth, rect.y, halfWidth, halfHeight, rect.r, rect.g, rect.b, 5, 0.0f, 1.0f },
+            { rect.x, rect.y + halfHeight, halfWidth, halfHeight, rect.r, rect.g, rect.b, 5, 1.0f, 0.0f },
+            { rect.x + halfWidth, rect.y + halfHeight, halfWidth, halfHeight, rect.r, rect.g, rect.b, 5, 0.0f, -1.0f }
+        };
+        rectangles.erase(rectangles.begin() + index);
+        rectangles.insert(rectangles.end(), newRects.begin(), newRects.end());
+    }
+
+    else if (animationumber == 2) {
+        vector<Rectangles> newRects = {
+            { rect.x, rect.y, halfWidth, halfHeight, rect.r, rect.g, rect.b, 5, -1.0f, 1.0f },
+            { rect.x + halfWidth, rect.y, halfWidth, halfHeight, rect.r, rect.g, rect.b, 5, -1.0f, -1.0f },
+            { rect.x, rect.y + halfHeight, halfWidth, halfHeight, rect.r, rect.g, rect.b, 5, 1.0f, 1.0f },
+            { rect.x + halfWidth, rect.y + halfHeight, halfWidth, halfHeight, rect.r, rect.g, rect.b, 5, 1.0f, -1.0f }
+        };
+        rectangles.erase(rectangles.begin() + index);
+        rectangles.insert(rectangles.end(), newRects.begin(), newRects.end());
+    }
+
+    else if (animationumber == 3) {
+        vector<Rectangles> newRects = {
+            { rect.x, rect.y, halfWidth, halfHeight, rect.r, rect.g, rect.b, 5, 0.0f, 1.0f },
+            { rect.x + halfWidth, rect.y, halfWidth, halfHeight, rect.r, rect.g, rect.b, 5, 0.0f, 1.0f },
+            { rect.x, rect.y + halfHeight, halfWidth, halfHeight, rect.r, rect.g, rect.b, 5, 0.0f, 1.0f },
+            { rect.x + halfWidth, rect.y + halfHeight, halfWidth, halfHeight, rect.r, rect.g, rect.b, 5, 0.0f, 1.0f }
+        };
+        rectangles.erase(rectangles.begin() + index);
+        rectangles.insert(rectangles.end(), newRects.begin(), newRects.end());
+    }
 
 }
 
@@ -147,7 +170,7 @@ GLvoid mouse(int button, int state, int x, int y) {
         int clickedRectangle = checkpoint(glX, glY);
 
         if (clickedRectangle != -1) {
-            splitRectangle(clickedRectangle);
+            splitRectangle(clickedRectangle, rectangles[clickedRectangle].animation);
         }
     }
 
