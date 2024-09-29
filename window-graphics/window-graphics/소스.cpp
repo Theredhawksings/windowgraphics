@@ -35,6 +35,8 @@ void createRandomRectangle(int count) {
         rect.g = dis(gen);
         rect.b = dis(gen);
         rect.animation = 1;
+        rect.dx = 0.0f;
+        rect.dy = 0.0f;
         rectangles.push_back(rect);
     }
     glutPostRedisplay();
@@ -42,8 +44,7 @@ void createRandomRectangle(int count) {
 
 void randomRectangle() {
     srand(static_cast<unsigned int>(time(0)));
-    int a = 5 + rand() % 6;
-    createRandomRectangle(a);
+    createRandomRectangle(1);
 }
 
 void drawRectangle(const Rectangles& rect) {
@@ -72,11 +73,11 @@ GLvoid Reshape(int w, int h) {
 }
 
 float toGLX(int x) {
-    return (x / 400.0f) - 1.0f;
+    return (x / 400.f) - 1.0f;
 }
 
 float toGLY(int y) {
-    return -(y / 300.0f) + 1.0f; // https://stackoverflow.com/questions/33851030/convert-glut-mouse-coordinates-to-opengl
+    return -(y / 300.f) + 1.0f;
 }
 
 int checkpoint(float x, float y) {
@@ -117,23 +118,36 @@ void splitRectangle(int index) {
     float halfWidth = rect.width / 2.0f;
     float halfHeight = rect.height / 2.0f;
 
-    rectangles.push_back({ rect.x, rect.y, halfWidth, halfHeight, rect.r, rect.g, rect.b, 5, 0.0f, 2.0f });
-    rectangles.push_back({ rect.x + halfWidth, rect.y, halfWidth, halfHeight, rect.r, rect.g, rect.b, 5, 2.0f, 0.0f });
-    rectangles.push_back({ rect.x, rect.y + halfHeight, halfWidth, halfHeight, rect.r, rect.g, rect.b, 5, 0.0f, -2.0f });
-    rectangles.push_back({ rect.x + halfWidth, rect.y + halfHeight, halfWidth, halfHeight, rect.r, rect.g, rect.b, 5, -2.0f, 0.0f });
+
+    /*
+    // 원래 사각형 제거
+    rectangles.erase(rectangles.begin() + index);
+
+    
+    rectangles.push_back({ rect.x, rect.y, halfWidth, halfHeight, rect.r, rect.g, rect.b, 5, 0.0f, 1.0f });
+    rectangles.push_back({ rect.x + halfWidth, rect.y, halfWidth, halfHeight, rect.r, rect.g, rect.b, 5, 1.0f, 0.0f });
+    rectangles.push_back({ rect.x, rect.y + halfHeight, halfWidth, halfHeight, rect.r, rect.g, rect.b, 5, 0.0f, -1.0f });
+    rectangles.push_back({ rect.x + halfWidth, rect.y + halfHeight, halfWidth, halfHeight, rect.r, rect.g, rect.b, 5, -1.0f, 0.0f });*/
+
+    vector<Rectangles> newRects = {
+        { rect.x, rect.y, halfWidth, halfHeight, rect.r, rect.g, rect.b, 5, 0.0f, 1.0f },
+        { rect.x + halfWidth, rect.y, halfWidth, halfHeight, rect.r, rect.g, rect.b, 5, 1.0f, 0.0f },
+        { rect.x, rect.y + halfHeight, halfWidth, halfHeight, rect.r, rect.g, rect.b, 5, 0.0f, -1.0f },
+        { rect.x + halfWidth, rect.y + halfHeight, halfWidth, halfHeight, rect.r, rect.g, rect.b, 5, -1.0f, 0.0f }
+    };
+    rectangles.erase(rectangles.begin() + index);
+    rectangles.insert(rectangles.end(), newRects.begin(), newRects.end());
 }
 
 GLvoid mouse(int button, int state, int x, int y) {
     float glX = toGLX(x);
     float glY = toGLY(y);
-    int ClickRectagnle = -1;
 
     if (button == GLUT_LEFT_BUTTON && state == GLUT_DOWN) {
-        ClickRectagnle = checkpoint(glX, glY);
+        int clickedRectangle = checkpoint(glX, glY);
 
-        if (ClickRectagnle != -1) {
-            splitRectangle(ClickRectagnle);
-            rectangles.erase(rectangles.begin() + ClickRectagnle); // 클릭된 사각형 제거
+        if (clickedRectangle != -1) {
+            splitRectangle(clickedRectangle);
         }
     }
 
@@ -144,17 +158,18 @@ int main(int argc, char** argv) {
     glutInit(&argc, argv);
     glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGBA);
     glutInitWindowPosition(200, 200);
-    glutInitWindowSize(800, 600);
-    glutCreateWindow("Example1");
+    glutInitWindowSize(windowWidth, windowHeight);
+    glutCreateWindow("Rectangle Splitting");
 
     glewExperimental = GL_TRUE;
     if (glewInit() != GLEW_OK) {
-        std::cerr << "Unable to initialize GLEW" << std::endl;
+        cerr << "Unable to initialize GLEW" << endl;
         exit(EXIT_FAILURE);
     }
     else {
-        std::cout << "GLEW Initialized\n";
+        cout << "GLEW Initialized" << endl;
     }
+
     randomRectangle();
 
     glutDisplayFunc(drawScene);
