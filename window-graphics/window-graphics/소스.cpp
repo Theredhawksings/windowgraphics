@@ -34,7 +34,7 @@ void createRandomRectangle(int count) {
         rect.r = dis(gen);
         rect.g = dis(gen);
         rect.b = dis(gen);
-        rect.animation = 1 + rand() % 3;
+        rect.animation = i % 4 + 1;
         rect.dx = 0.0f;
         rect.dy = 0.0f;
         rectangles.push_back(rect);
@@ -125,8 +125,8 @@ void splitRectangle(int index, int animationumber) {
     rectangles.push_back({ rect.x, rect.y + halfHeight, halfWidth, halfHeight, rect.r, rect.g, rect.b, 5, 0.0f, -1.0f });
     rectangles.push_back({ rect.x + halfWidth, rect.y + halfHeight, halfWidth, halfHeight, rect.r, rect.g, rect.b, 5, -1.0f, 0.0f });
 
-
     rectangles.erase(rectangles.begin() + index);*/
+
     if (animationumber == 1) {
         vector<Rectangles> newRects = {
             { rect.x, rect.y, halfWidth, halfHeight, rect.r, rect.g, rect.b, 5, -1.0f, 0.0f },
@@ -160,6 +160,24 @@ void splitRectangle(int index, int animationumber) {
         rectangles.insert(rectangles.end(), newRects.begin(), newRects.end());
     }
 
+    else if (animationumber == 4) {
+        float quaterWidth = rect.width / 4.0f;
+
+
+        vector<Rectangles> newRects = {
+            { rect.x, rect.y, quaterWidth, halfHeight, rect.r, rect.g, rect.b, 5, -1.0f, -1.0f },
+            { rect.x + quaterWidth, rect.y, quaterWidth, halfHeight, rect.r, rect.g, rect.b, 5, 0.0f, -1.0f },
+            { rect.x + quaterWidth * 2, rect.y, quaterWidth, halfHeight, rect.r, rect.g, rect.b, 5, 1.0f, -1.0f },
+            { rect.x + quaterWidth * 3, rect.y, quaterWidth, halfHeight, rect.r, rect.g, rect.b, 5, 1.0f, 0.0f },
+            { rect.x, rect.y + halfHeight, quaterWidth, halfHeight, rect.r, rect.g, rect.b, 5, 0.0f, -1.0f },
+            { rect.x + quaterWidth, rect.y + halfHeight, quaterWidth, halfHeight, rect.r, rect.g, rect.b, 5, -1.0f, 1.0f },
+            { rect.x + quaterWidth * 2, rect.y + halfHeight, quaterWidth, halfHeight, rect.r, rect.g, rect.b, 5, 0.0f, 1.0f },
+            { rect.x + quaterWidth * 3, rect.y + halfHeight, quaterWidth, halfHeight, rect.r, rect.g, rect.b, 5, 1.0f, 1.0f }
+        };
+
+        rectangles.erase(rectangles.begin() + index);
+        rectangles.insert(rectangles.end(), newRects.begin(), newRects.end());
+    }
 }
 
 GLvoid mouse(int button, int state, int x, int y) {
