@@ -13,7 +13,7 @@ random_device rd;
 mt19937 gen(rd());
 uniform_real_distribution<> dis(0, 1);
 
-const float ANIMATION_SPEED = 0.0001f; // 애니메이션 속도 제어 (값이 작을수록 느려짐)
+float ANIMATION_SPEED = 0.0001f; // 애니메이션 속도 제어 (값이 작을수록 느려짐)
 
 struct Rectangles {
     float x, y, width, height;
@@ -34,7 +34,7 @@ void createRandomRectangle(int count) {
         rect.r = dis(gen);
         rect.g = dis(gen);
         rect.b = dis(gen);
-        rect.animation = 1;
+        rect.animation = 1 + rand() % 4;
         rect.dx = 0.0f;
         rect.dy = 0.0f;
         rectangles.push_back(rect);
@@ -44,7 +44,8 @@ void createRandomRectangle(int count) {
 
 void randomRectangle() {
     srand(static_cast<unsigned int>(time(0)));
-    createRandomRectangle(1);
+    int a = rand() % 6 + 5;
+    createRandomRectangle(a);
 }
 
 void drawRectangle(const Rectangles& rect) {
@@ -66,6 +67,7 @@ GLvoid drawScene() {
     }
 
     glutSwapBuffers();
+    glFlush(); // 추가
 }
 
 GLvoid Reshape(int w, int h) {
@@ -113,21 +115,18 @@ void animateRectangles() {
     }
 }
 
+
 void splitRectangle(int index) {
     Rectangles& rect = rectangles[index];
     float halfWidth = rect.width / 2.0f;
     float halfHeight = rect.height / 2.0f;
 
-
-    /*
-    // 원래 사각형 제거
-    rectangles.erase(rectangles.begin() + index);
-
-    
-    rectangles.push_back({ rect.x, rect.y, halfWidth, halfHeight, rect.r, rect.g, rect.b, 5, 0.0f, 1.0f });
+    /*rectangles.push_back({ rect.x, rect.y, halfWidth, halfHeight, rect.r, rect.g, rect.b, 5, 0.0f, 1.0f });
     rectangles.push_back({ rect.x + halfWidth, rect.y, halfWidth, halfHeight, rect.r, rect.g, rect.b, 5, 1.0f, 0.0f });
     rectangles.push_back({ rect.x, rect.y + halfHeight, halfWidth, halfHeight, rect.r, rect.g, rect.b, 5, 0.0f, -1.0f });
-    rectangles.push_back({ rect.x + halfWidth, rect.y + halfHeight, halfWidth, halfHeight, rect.r, rect.g, rect.b, 5, -1.0f, 0.0f });*/
+    rectangles.push_back({ rect.x + halfWidth, rect.y + halfHeight, halfWidth, halfHeight, rect.r, rect.g, rect.b, 5, -1.0f, 0.0f });
+
+    rectangles.erase(rectangles.begin() + index); */
 
     vector<Rectangles> newRects = {
         { rect.x, rect.y, halfWidth, halfHeight, rect.r, rect.g, rect.b, 5, 0.0f, 1.0f },
@@ -137,6 +136,7 @@ void splitRectangle(int index) {
     };
     rectangles.erase(rectangles.begin() + index);
     rectangles.insert(rectangles.end(), newRects.begin(), newRects.end());
+
 }
 
 GLvoid mouse(int button, int state, int x, int y) {
