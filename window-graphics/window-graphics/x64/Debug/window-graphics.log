@@ -1,33 +1,11 @@
 ﻿  소스.cpp
-C:\Users\myeos\source\repos\windowgraphics\window-graphics\window-graphics\소스.cpp(219,42): warning C4244: '인수': 'double'에서 'GLclampf'(으)로 변환하면서 데이터가 손실될 수 있습니다.
-C:\Users\myeos\source\repos\windowgraphics\window-graphics\window-graphics\소스.cpp(219,31): warning C4244: '인수': 'double'에서 'GLclampf'(으)로 변환하면서 데이터가 손실될 수 있습니다.
-C:\Users\myeos\source\repos\windowgraphics\window-graphics\window-graphics\소스.cpp(219,20): warning C4244: '인수': 'double'에서 'GLclampf'(으)로 변환하면서 데이터가 손실될 수 있습니다.
-C:\Users\myeos\source\repos\windowgraphics\window-graphics\window-graphics\소스.cpp(222,66): warning C4244: '인수': 'double'에서 'GLfloat'(으)로 변환하면서 데이터가 손실될 수 있습니다.
-C:\Users\myeos\source\repos\windowgraphics\window-graphics\window-graphics\소스.cpp(222,46): warning C4244: '인수': 'double'에서 'GLfloat'(으)로 변환하면서 데이터가 손실될 수 있습니다.
-C:\Users\myeos\source\repos\windowgraphics\window-graphics\window-graphics\소스.cpp(222,26): warning C4244: '인수': 'double'에서 'GLfloat'(으)로 변환하면서 데이터가 손실될 수 있습니다.
-C:\Users\myeos\source\repos\windowgraphics\window-graphics\window-graphics\소스.cpp(223,28): warning C4244: '인수': 'double'에서 'GLfloat'(으)로 변환하면서 데이터가 손실될 수 있습니다.
-C:\Users\myeos\source\repos\windowgraphics\window-graphics\window-graphics\소스.cpp(223,23): warning C4244: '인수': 'double'에서 'GLfloat'(으)로 변환하면서 데이터가 손실될 수 있습니다.
-C:\Users\myeos\source\repos\windowgraphics\window-graphics\window-graphics\소스.cpp(223,18): warning C4244: '인수': 'double'에서 'GLfloat'(으)로 변환하면서 데이터가 손실될 수 있습니다.
-C:\Users\myeos\source\repos\windowgraphics\window-graphics\window-graphics\소스.cpp(223,13): warning C4244: '인수': 'double'에서 'GLfloat'(으)로 변환하면서 데이터가 손실될 수 있습니다.
-C:\Users\myeos\source\repos\windowgraphics\window-graphics\window-graphics\소스.cpp(225,66): warning C4244: '인수': 'double'에서 'GLfloat'(으)로 변환하면서 데이터가 손실될 수 있습니다.
-C:\Users\myeos\source\repos\windowgraphics\window-graphics\window-graphics\소스.cpp(225,46): warning C4244: '인수': 'double'에서 'GLfloat'(으)로 변환하면서 데이터가 손실될 수 있습니다.
-C:\Users\myeos\source\repos\windowgraphics\window-graphics\window-graphics\소스.cpp(225,26): warning C4244: '인수': 'double'에서 'GLfloat'(으)로 변환하면서 데이터가 손실될 수 있습니다.
-C:\Users\myeos\source\repos\windowgraphics\window-graphics\window-graphics\소스.cpp(226,28): warning C4244: '인수': 'double'에서 'GLfloat'(으)로 변환하면서 데이터가 손실될 수 있습니다.
-C:\Users\myeos\source\repos\windowgraphics\window-graphics\window-graphics\소스.cpp(226,23): warning C4244: '인수': 'double'에서 'GLfloat'(으)로 변환하면서 데이터가 손실될 수 있습니다.
-C:\Users\myeos\source\repos\windowgraphics\window-graphics\window-graphics\소스.cpp(226,18): warning C4244: '인수': 'double'에서 'GLfloat'(으)로 변환하면서 데이터가 손실될 수 있습니다.
-C:\Users\myeos\source\repos\windowgraphics\window-graphics\window-graphics\소스.cpp(226,13): warning C4244: '인수': 'double'에서 'GLfloat'(으)로 변환하면서 데이터가 손실될 수 있습니다.
-C:\Users\myeos\source\repos\windowgraphics\window-graphics\window-graphics\소스.cpp(228,66): warning C4244: '인수': 'double'에서 'GLfloat'(으)로 변환하면서 데이터가 손실될 수 있습니다.
-C:\Users\myeos\source\repos\windowgraphics\window-graphics\window-graphics\소스.cpp(228,46): warning C4244: '인수': 'double'에서 'GLfloat'(으)로 변환하면서 데이터가 손실될 수 있습니다.
-C:\Users\myeos\source\repos\windowgraphics\window-graphics\window-graphics\소스.cpp(228,26): warning C4244: '인수': 'double'에서 'GLfloat'(으)로 변환하면서 데이터가 손실될 수 있습니다.
-C:\Users\myeos\source\repos\windowgraphics\window-graphics\window-graphics\소스.cpp(229,28): warning C4244: '인수': 'double'에서 'GLfloat'(으)로 변환하면서 데이터가 손실될 수 있습니다.
-C:\Users\myeos\source\repos\windowgraphics\window-graphics\window-graphics\소스.cpp(229,23): warning C4244: '인수': 'double'에서 'GLfloat'(으)로 변환하면서 데이터가 손실될 수 있습니다.
-C:\Users\myeos\source\repos\windowgraphics\window-graphics\window-graphics\소스.cpp(229,18): warning C4244: '인수': 'double'에서 'GLfloat'(으)로 변환하면서 데이터가 손실될 수 있습니다.
-C:\Users\myeos\source\repos\windowgraphics\window-graphics\window-graphics\소스.cpp(229,13): warning C4244: '인수': 'double'에서 'GLfloat'(으)로 변환하면서 데이터가 손실될 수 있습니다.
-C:\Users\myeos\source\repos\windowgraphics\window-graphics\window-graphics\소스.cpp(231,66): warning C4244: '인수': 'double'에서 'GLfloat'(으)로 변환하면서 데이터가 손실될 수 있습니다.
-C:\Users\myeos\source\repos\windowgraphics\window-graphics\window-graphics\소스.cpp(231,46): warning C4244: '인수': 'double'에서 'GLfloat'(으)로 변환하면서 데이터가 손실될 수 있습니다.
-C:\Users\myeos\source\repos\windowgraphics\window-graphics\window-graphics\소스.cpp(231,26): warning C4244: '인수': 'double'에서 'GLfloat'(으)로 변환하면서 데이터가 손실될 수 있습니다.
-C:\Users\myeos\source\repos\windowgraphics\window-graphics\window-graphics\소스.cpp(232,28): warning C4244: '인수': 'double'에서 'GLfloat'(으)로 변환하면서 데이터가 손실될 수 있습니다.
-C:\Users\myeos\source\repos\windowgraphics\window-graphics\window-graphics\소스.cpp(232,23): warning C4244: '인수': 'double'에서 'GLfloat'(으)로 변환하면서 데이터가 손실될 수 있습니다.
-C:\Users\myeos\source\repos\windowgraphics\window-graphics\window-graphics\소스.cpp(232,18): warning C4244: '인수': 'double'에서 'GLfloat'(으)로 변환하면서 데이터가 손실될 수 있습니다.
-C:\Users\myeos\source\repos\windowgraphics\window-graphics\window-graphics\소스.cpp(232,13): warning C4244: '인수': 'double'에서 'GLfloat'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+C:\Users\myeos\source\repos\windowgraphics\window-graphics\window-graphics\소스.cpp(28,38): warning C4244: '=': 'double'에서 'float'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+C:\Users\myeos\source\repos\windowgraphics\window-graphics\window-graphics\소스.cpp(29,39): warning C4244: '=': 'double'에서 'float'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+C:\Users\myeos\source\repos\windowgraphics\window-graphics\window-graphics\소스.cpp(30,34): warning C4244: '=': 'double'에서 'float'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+C:\Users\myeos\source\repos\windowgraphics\window-graphics\window-graphics\소스.cpp(31,34): warning C4244: '=': 'double'에서 'float'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+C:\Users\myeos\source\repos\windowgraphics\window-graphics\window-graphics\소스.cpp(32,21): warning C4244: '=': 'double'에서 'float'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+C:\Users\myeos\source\repos\windowgraphics\window-graphics\window-graphics\소스.cpp(33,21): warning C4244: '=': 'double'에서 'float'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+C:\Users\myeos\source\repos\windowgraphics\window-graphics\window-graphics\소스.cpp(34,21): warning C4244: '=': 'double'에서 'float'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+C:\Users\myeos\source\repos\windowgraphics\window-graphics\window-graphics\소스.cpp(69,16): warning C4267: '초기화 중': 'size_t'에서 'int'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+C:\Users\myeos\source\repos\windowgraphics\window-graphics\window-graphics\소스.cpp(79,16): warning C4267: '초기화 중': 'size_t'에서 'int'(으)로 변환하면서 데이터가 손실될 수 있습니다.
   window-graphics.vcxproj -> C:\Users\myeos\source\repos\windowgraphics\window-graphics\x64\Debug\window-graphics.exe
