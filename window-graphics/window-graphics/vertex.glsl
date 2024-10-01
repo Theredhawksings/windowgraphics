@@ -1,7 +1,28 @@
 #version 330 core
-void main(){
-const vec4 vertex[3] = vec4[3] (vec4(-0.25, -0.25, 0.5, 1.0), vec4(0.25, -0.25, 0.5, 1.0), vec4(0.0, 0.25, 0.5, 1.0));
 
-gl_Position = vertex [gl_VertexID];
+out vec4 vertexColor;
 
-} 
+void main() {
+    const vec4 vertices[6] = vec4[6](
+        vec4(-0.5, -0.5, 0.0, 1.0),  // 첫 번째 삼각형의 왼쪽 아래
+        vec4(0.5, -0.5, 0.0, 1.0),   // 첫 번째 삼각형의 오른쪽 아래
+        vec4(0.0, 0.5, 0.0, 1.0),    // 첫 번째 삼각형의 위쪽
+
+        vec4(-0.5, 0.0, 0.0, 1.0),   // 두 번째 삼각형의 왼쪽 아래
+        vec4(0.5, 0.0, 0.0, 1.0),    // 두 번째 삼각형의 오른쪽 아래
+        vec4(0.0, 1.0, 0.0, 1.0)     // 두 번째 삼각형의 위쪽
+    );
+
+    const vec4 colors[6] = vec4[6](
+        vec4(1.0, 0.0, 0.0, 1.0),    // 첫 번째 삼각형: 빨간색
+        vec4(1.0, 0.0, 0.0, 1.0),    
+        vec4(1.0, 0.0, 0.0, 1.0),    
+
+        vec4(0.0, 0.0, 1.0, 1.0),    // 두 번째 삼각형: 파란색
+        vec4(0.0, 0.0, 1.0, 1.0),    
+        vec4(0.0, 0.0, 1.0, 1.0)     
+    );
+
+    gl_Position = vertices[gl_VertexID];
+    vertexColor = colors[gl_VertexID];  // 색상을 프래그먼트 셰이더로 전달
+}
