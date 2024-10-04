@@ -6,58 +6,52 @@
 #include <ctime>
 #include <fstream>
 #include <sstream>
-#include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtc/type_ptr.hpp>
+
+using namespace std;
 
 struct Shape {
     GLenum type;
-    std::vector<GLfloat> vertices;
-    std::vector<GLfloat> colors;
+    vector<GLfloat> vertices;
+    vector<GLfloat> colors;
     GLfloat size;
-    bool isRectangle;
 };
 
-std::vector<Shape> shapes;
+vector<Shape> shapes;
 GLint width = 800, height = 600;
 char currentMode = 'p';
-GLuint shaderProgram, VAO, VBO;
-glm::mat4 projection;
 
-GLuint loadShader(const char* file_path, GLenum shaderType) {
-    std::string shaderCode;
-    std::ifstream shaderFile;
-    shaderFile.exceptions(std::ifstream::failbit | std::ifstream::badbit);
-    try {
-        shaderFile.open(file_path);
-        std::stringstream shaderStream;
-        shaderStream << shaderFile.rdbuf();
-        shaderFile.close();
-        shaderCode = shaderStream.str();
-    }
-    catch (std::ifstream::failure& e) {
-        std::cout << "ERROR::SHADER::FILE_NOT_SUCCESSFULLY_READ" << std::endl;
-    }
-    const char* shaderSource = shaderCode.c_str();
+GLuint shaderProgram;
+GLuint VBO, VAO, CBO;
 
-    GLuint shader = glCreateShader(shaderType);
-    glShaderSource(shader, 1, &shaderSource, NULL);
+string loadShaderSource(const char* filename) {
+    ifstream file(filename);
+    stringstream buffer;
+    buffer << file.rdbuf();
+    return buffer.str();
+}
+
+GLuint compileShader(GLenum type, const char* source) {
+    GLuint shader = glCreateShader(type);
+    glShaderSource(shader, 1, &source, NULL);
     glCompileShader(shader);
 
     GLint success;
-    GLchar infoLog[512];
     glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
     if (!success) {
+        GLchar infoLog[512];
         glGetShaderInfoLog(shader, 512, NULL, infoLog);
-        std::cout << "ERROR::SHADER::COMPILATION_FAILED\n" << infoLog << std::endl;
+        ::cerr << "ERROR::SHADER::COMPILATION_FAILED\n" << infoLog << endl;
     }
 
     return shader;
 }
 
-void initShaders() {
-    GLuint vertexShader = loadShader("vertex.glsl", GL_VERTEX_SHADER);
-    GLuint fragmentShader = loadShader("fragment.glsl", GL_FRAGMENT_SHADER);
+void compileShaders() {
+    string vertexSource = loadShaderSource("vertex.glsl");
+    string fragmentSource = loadShaderSource("fragment.glsl");
+
+    GLuint vertexShader = compileShader(GL_VERTEX_SHADER, vertexSource.c_str());
+    GLuint fragmentShader = compileShader(GL_FRAGMENT_SHADER, fragmentSource.c_str());
 
     shaderProgram = glCreateProgram();
     glAttachShader(shaderProgram, vertexShader);
@@ -65,106 +59,87 @@ void initShaders() {
     glLinkProgram(shaderProgram);
 
     GLint success;
-    GLchar infoLog[512];
     glGetProgramiv(shaderProgram, GL_LINK_STATUS, &success);
+
     if (!success) {
+        GLchar infoLog[512];
         glGetProgramInfoLog(shaderProgram, 512, NULL, infoLog);
-        std::cout << "ERROR::SHADER::PROGRAM::LINKING_FAILED\n" << infoLog << std::endl;
+        cerr << "ERROR::SHADER::PROGRAM::LINKING_FAILED\n" << infoLog << endl;
     }
 
     glDeleteShader(vertexShader);
     glDeleteShader(fragmentShader);
-
-    glUseProgram(shaderProgram);
 }
 
 void setupBuffers() {
     glGenVertexArrays(1, &VAO);
     glGenBuffers(1, &VBO);
-}
+    glGenBuffers(1, &CBO);
 
-void updateProjection() {
-    projection = glm::ortho(-1.0f, 1.0f, -1.0f, 1.0f, -1.0f, 1.0f);
-    GLint projLoc = glGetUniformLocation(shaderProgram, "uProjection");
-    glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projection));
+    glBindVertexArray(VAO);
+
+    glBindBuffer(GL_ARRAY_BUFFER, VBO);
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), 0);
+    glEnableVertexAttribArray(0);
+
+    glBindBuffer(GL_ARRAY_BUFFER, CBO);
+    glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(float), 0);
+    glEnableVertexAttribArray(1);
+
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindVertexArray(0);
 }
 
 void DrawShapes() {
     glClear(GL_COLOR_BUFFER_BIT);
+    glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
 
     glUseProgram(shaderProgram);
-    glBindVertexArray(VAO);
 
     for (const auto& shape : shapes) {
-        std::vector<GLfloat> data;
-        for (size_t i = 0; i < shape.vertices.size(); i += 2) {
-            data.push_back(shape.vertices[i]);
-            data.push_back(shape.vertices[i + 1]);
-            data.insert(data.end(), shape.colors.begin() + i / 2 * 4, shape.colors.begin() + (i / 2 + 1) * 4);
-        }
+        glBindVertexArray(VAO);
 
         glBindBuffer(GL_ARRAY_BUFFER, VBO);
-        glBufferData(GL_ARRAY_BUFFER, data.size() * sizeof(GLfloat), data.data(), GL_STATIC_DRAW);
+        glBufferData(GL_ARRAY_BUFFER, shape.vertices.size() * sizeof(GLfloat), shape.vertices.data(), GL_STATIC_DRAW);
 
-        glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (void*)0);
-        glEnableVertexAttribArray(0);
-        glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (void*)(2 * sizeof(GLfloat)));
-        glEnableVertexAttribArray(1);
+        glBindBuffer(GL_ARRAY_BUFFER, CBO);
+        glBufferData(GL_ARRAY_BUFFER, shape.colors.size() * sizeof(GLfloat), shape.colors.data(), GL_STATIC_DRAW);
 
         if (shape.type == GL_POINTS) {
             glPointSize(shape.size * 10.0f);
         }
 
         glDrawArrays(shape.type, 0, shape.vertices.size() / 2);
-
-        if (shape.isRectangle) {
-            glLineWidth(3.0f);
-            std::vector<GLfloat> diagonalData = {
-                shape.vertices[0], shape.vertices[1], 0.0f, 0.0f, 0.0f, 1.0f,
-                shape.vertices[4], shape.vertices[5], 0.0f, 0.0f, 0.0f, 1.0f
-            };
-            glBufferData(GL_ARRAY_BUFFER, diagonalData.size() * sizeof(GLfloat), diagonalData.data(), GL_STATIC_DRAW);
-            glDrawArrays(GL_LINES, 0, 2);
-            glLineWidth(1.0f);
-        }
     }
 
-    glBindVertexArray(0);
     glutSwapBuffers();
 }
 
 void createShape(int x, int y) {
     Shape newShape;
-    std::vector<GLfloat> randomColor = {
-        static_cast<GLfloat>(rand()) / RAND_MAX,
-        static_cast<GLfloat>(rand()) / RAND_MAX,
-        static_cast<GLfloat>(rand()) / RAND_MAX,
-        1.0f
-    };
+    GLfloat randomColor[4] = { static_cast<GLfloat>(rand()) / RAND_MAX,
+                                static_cast<GLfloat>(rand()) / RAND_MAX,
+                                static_cast<GLfloat>(rand()) / RAND_MAX, 1.0f };
 
     GLfloat openglX = (2.0f * x) / width - 1.0f;
     GLfloat openglY = 1.0f - (2.0f * y) / height;
 
     GLfloat randomSize = 1.0f + static_cast<GLfloat>(rand()) / (static_cast<GLfloat>(RAND_MAX / 2.0f));
 
-    newShape.colors = randomColor;
-    newShape.isRectangle = false;
     newShape.size = randomSize;
 
     switch (currentMode) {
     case 'p':
         newShape.type = GL_POINTS;
         newShape.vertices = { openglX, openglY };
-        newShape.colors = randomColor;
+        newShape.colors = { randomColor[0], randomColor[1], randomColor[2], randomColor[3] };
         break;
     case 'l':
         newShape.type = GL_LINES;
-        newShape.vertices = {
-            openglX, openglY,
-            openglX + 0.1f * randomSize, openglY + 0.1f * randomSize
-        };
-        newShape.colors.insert(newShape.colors.end(), randomColor.begin(), randomColor.end());
-        newShape.colors.insert(newShape.colors.end(), randomColor.begin(), randomColor.end());
+        newShape.vertices = { openglX, openglY,
+                              openglX + 0.1f * randomSize, openglY + 0.1f * randomSize };
+        newShape.colors = { randomColor[0], randomColor[1], randomColor[2], randomColor[3],
+                            randomColor[0], randomColor[1], randomColor[2], randomColor[3] };
         break;
     case 't':
         newShape.type = GL_TRIANGLES;
@@ -173,22 +148,26 @@ void createShape(int x, int y) {
             openglX + 0.1f * randomSize, openglY + 0.1f * randomSize,
             openglX - 0.1f * randomSize, openglY + 0.1f * randomSize
         };
-        for (int i = 0; i < 3; i++) {
-            newShape.colors.insert(newShape.colors.end(), randomColor.begin(), randomColor.end());
-        }
+        newShape.colors = { randomColor[0], randomColor[1], randomColor[2], randomColor[3],
+                            randomColor[0], randomColor[1], randomColor[2], randomColor[3],
+                            randomColor[0], randomColor[1], randomColor[2], randomColor[3] };
         break;
     case 'r':
-        newShape.type = GL_QUADS;
+        newShape.type = GL_TRIANGLES;
         newShape.vertices = {
             openglX - 0.1f * randomSize, openglY - 0.1f * randomSize,
             openglX + 0.1f * randomSize, openglY - 0.1f * randomSize,
             openglX + 0.1f * randomSize, openglY + 0.1f * randomSize,
+            openglX - 0.1f * randomSize, openglY - 0.1f * randomSize,
+            openglX + 0.1f * randomSize, openglY + 0.1f * randomSize,
             openglX - 0.1f * randomSize, openglY + 0.1f * randomSize
         };
-        for (int i = 0; i < 4; i++) {
-            newShape.colors.insert(newShape.colors.end(), randomColor.begin(), randomColor.end());
-        }
-        newShape.isRectangle = true;
+        newShape.colors = { randomColor[0], randomColor[1], randomColor[2], randomColor[3],
+                            randomColor[0], randomColor[1], randomColor[2], randomColor[3],
+                            randomColor[0], randomColor[1], randomColor[2], randomColor[3],
+                            randomColor[0], randomColor[1], randomColor[2], randomColor[3],
+                            randomColor[0], randomColor[1], randomColor[2], randomColor[3],
+                            randomColor[0], randomColor[1], randomColor[2], randomColor[3] };
         break;
     }
 
@@ -199,16 +178,6 @@ void createShape(int x, int y) {
 void mouse(int button, int state, int x, int y) {
     if (button == GLUT_LEFT_BUTTON && state == GLUT_DOWN) {
         createShape(x, y);
-    }
-}
-
-void printMode() {
-    std::cout << "현재 모드: ";
-    switch (currentMode) {
-    case 'p': std::cout << "점 그리기" << std::endl; break;
-    case 'l': std::cout << "선 그리기" << std::endl; break;
-    case 't': std::cout << "삼각형 그리기" << std::endl; break;
-    case 'r': std::cout << "사각형 그리기" << std::endl; break;
     }
 }
 
@@ -235,7 +204,6 @@ void keyboard(unsigned char key, int x, int y) {
     switch (key) {
     case 'p': case 'l': case 't': case 'r':
         currentMode = key;
-        printMode();
         break;
     case 'c':
         shapes.clear();
@@ -248,20 +216,10 @@ void keyboard(unsigned char key, int x, int y) {
     }
 }
 
-void specialKeyboard(int key, int x, int y) {
-    switch (key) {
-    case GLUT_KEY_UP: moveRandomShape(0); break;
-    case GLUT_KEY_DOWN: moveRandomShape(1); break;
-    case GLUT_KEY_LEFT: moveRandomShape(2); break;
-    case GLUT_KEY_RIGHT: moveRandomShape(3); break;
-    }
-}
-
 void Reshape(int w, int h) {
     glViewport(0, 0, w, h);
     width = w;
     height = h;
-    updateProjection();
 }
 
 int main(int argc, char** argv) {
@@ -275,35 +233,25 @@ int main(int argc, char** argv) {
 
     glewExperimental = GL_TRUE;
     if (glewInit() != GLEW_OK) {
-        std::cerr << "Failed to initialize GLEW" << std::endl;
+        cerr << "Failed to initialize GLEW" << endl;
         return -1;
     }
 
-    initShaders();
+    compileShaders();
     setupBuffers();
-    updateProjection();
-
-    glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
 
     glutDisplayFunc(DrawShapes);
     glutMouseFunc(mouse);
     glutKeyboardFunc(keyboard);
-    glutSpecialFunc(specialKeyboard);
     glutReshapeFunc(Reshape);
 
     glEnable(GL_POINT_SMOOTH);
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-    std::cout << "p: 점 그리기  l: 선 그리기  t: 삼각형 그리기  r: 사각형 그리기" << std::endl;
-    std::cout << "w/a/s/d: 랜덤 도형 이동 (위/왼쪽/아래/오른쪽)" << std::endl;
-    printMode();
-
+    cout << "p: 점 그리기  l: 선 그리기  t: 삼각형 그리기  r: 사각형 그리기" << endl;
+    cout << "w/a/s/d: 랜덤 도형 이동 (위/왼쪽/아래/오른쪽)" << endl;
     glutMainLoop();
-
-    glDeleteVertexArrays(1, &VAO);
-    glDeleteBuffers(1, &VBO);
-    glDeleteProgram(shaderProgram);
 
     return 0;
 }
