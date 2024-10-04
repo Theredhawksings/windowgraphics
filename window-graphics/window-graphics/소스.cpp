@@ -1,256 +1,154 @@
+#define _CRT_SECURE_NO_WARNINGS 
+
 #include <iostream>
-#include <GL/glew.h>
-#include <GL/freeglut.h>
 #include <vector>
 #include <cstdlib>
 #include <ctime>
-#include <fstream>
-#include <sstream>
+#include <GL/glew.h>
+#include <GL/freeglut.h>
+#include <GL/freeglut_ext.h>
 
-using namespace std;
+GLuint width = 800, height = 600;
+GLuint vertexShader, fragmentShader, shaderProgramID;
+GLint result;
+GLchar errorLog[512];
+GLuint VAO, VBO, CBO;
 
-struct Shape {
-    GLenum type;
-    vector<GLfloat> vertices;
-    vector<GLfloat> colors;
-    GLfloat size;
+struct Triangle {
+    std::vector<GLfloat> vertices;
+    std::vector<GLfloat> colors;
 };
 
-vector<Shape> shapes;
-GLint width = 800, height = 600;
-char currentMode = 'p';
+std::vector<Triangle> triangles(4);
 
-GLuint shaderProgram;
-GLuint VBO, VAO, CBO;
+void initTriangles() {
+    triangles[0].vertices = { -0.6f, 0.5f, 0.0f, -0.4f, 0.5f, 0.0f, -0.5f, 0.8f, 0.0f };
+    triangles[0].colors = { 1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f };
 
-string loadShaderSource(const char* filename) {
-    ifstream file(filename);
-    stringstream buffer;
-    buffer << file.rdbuf();
-    return buffer.str();
+    triangles[1].vertices = { 0.4f, 0.5f, 0.0f, 0.6f, 0.5f, 0.0f, 0.5f, 0.8f, 0.0f };
+    triangles[1].colors = { 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f };
+
+    triangles[2].vertices = { -0.6f, -0.9f, 0.0f, -0.4f, -0.9f, 0.0f, -0.5f, -0.6f, 0.0f };
+    triangles[2].colors = { 1.0f, 1.0f, 0.0f, 1.0f, 1.0f, 0.0f, 1.0f, 1.0f, 0.0f };
+
+    triangles[3].vertices = { 0.4f, -0.9f, 0.0f, 0.6f, -0.9f, 0.0f, 0.5f, -0.6f, 0.0f };
+    triangles[3].colors = { 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f };
 }
 
-GLuint compileShader(GLenum type, const char* source) {
-    GLuint shader = glCreateShader(type);
-    glShaderSource(shader, 1, &source, NULL);
-    glCompileShader(shader);
 
-    GLint success;
-    glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
-    if (!success) {
-        GLchar infoLog[512];
-        glGetShaderInfoLog(shader, 512, NULL, infoLog);
-        ::cerr << "ERROR::SHADER::COMPILATION_FAILED\n" << infoLog << endl;
-    }
 
-    return shader;
+char* filetobuf(const char* file) {
+    FILE* fptr;
+    long length;
+    char* buf;
+    fptr = fopen(file, "rb");
+    if (!fptr)
+        return NULL;
+    fseek(fptr, 0, SEEK_END);
+    length = ftell(fptr);
+    buf = (char*)malloc(length + 1);
+    fseek(fptr, 0, SEEK_SET);
+    fread(buf, length, 1, fptr);
+    fclose(fptr);
+    buf[length] = 0;
+    return buf;
 }
 
-void compileShaders() {
-    string vertexSource = loadShaderSource("vertex.glsl");
-    string fragmentSource = loadShaderSource("fragment.glsl");
-
-    GLuint vertexShader = compileShader(GL_VERTEX_SHADER, vertexSource.c_str());
-    GLuint fragmentShader = compileShader(GL_FRAGMENT_SHADER, fragmentSource.c_str());
-
-    shaderProgram = glCreateProgram();
-    glAttachShader(shaderProgram, vertexShader);
-    glAttachShader(shaderProgram, fragmentShader);
-    glLinkProgram(shaderProgram);
-
-    GLint success;
-    glGetProgramiv(shaderProgram, GL_LINK_STATUS, &success);
-
-    if (!success) {
-        GLchar infoLog[512];
-        glGetProgramInfoLog(shaderProgram, 512, NULL, infoLog);
-        cerr << "ERROR::SHADER::PROGRAM::LINKING_FAILED\n" << infoLog << endl;
+void makeVertexShaders() {
+    GLchar* vertexSource = filetobuf("vertex.glsl");
+    vertexShader = glCreateShader(GL_VERTEX_SHADER);
+    glShaderSource(vertexShader, 1, &vertexSource, NULL);
+    glCompileShader(vertexShader);
+    glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &result);
+    if (!result) {
+        glGetShaderInfoLog(vertexShader, 512, NULL, errorLog);
+        std::cerr << "ERROR: vertex shader 컴파일 실패\n" << errorLog << std::endl;
+        exit(EXIT_FAILURE);
     }
+}
 
+void makeFragmentShaders() {
+    GLchar* fragmentSource = filetobuf("fragment.glsl");
+    fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
+    glShaderSource(fragmentShader, 1, &fragmentSource, NULL);
+    glCompileShader(fragmentShader);
+    glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &result);
+    if (!result) {
+        glGetShaderInfoLog(fragmentShader, 512, NULL, errorLog);
+        std::cerr << "ERROR: fragment shader 컴파일 실패\n" << errorLog << std::endl;
+        exit(EXIT_FAILURE);
+    }
+}
+
+GLuint makeShaderProgram() {
+    GLuint shaderID = glCreateProgram();
+    glAttachShader(shaderID, vertexShader);
+    glAttachShader(shaderID, fragmentShader);
+    glLinkProgram(shaderID);
+    glGetProgramiv(shaderID, GL_LINK_STATUS, &result);
+    if (!result) {
+        glGetProgramInfoLog(shaderID, 512, NULL, errorLog);
+        std::cerr << "ERROR: shader program 연결 실패\n" << errorLog << std::endl;
+        exit(EXIT_FAILURE);
+    }
     glDeleteShader(vertexShader);
     glDeleteShader(fragmentShader);
+    return shaderID;
 }
 
-void setupBuffers() {
-    glGenVertexArrays(1, &VAO);
-    glGenBuffers(1, &VBO);
-    glGenBuffers(1, &CBO);
-
-    glBindVertexArray(VAO);
-
-    glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), 0);
-    glEnableVertexAttribArray(0);
-
-    glBindBuffer(GL_ARRAY_BUFFER, CBO);
-    glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(float), 0);
-    glEnableVertexAttribArray(1);
-
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-    glBindVertexArray(0);
-}
-
-void DrawShapes() {
-    glClear(GL_COLOR_BUFFER_BIT);
+GLvoid DrawScene() {
     glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT);
+    glUseProgram(shaderProgramID);
 
-    glUseProgram(shaderProgram);
-
-    for (const auto& shape : shapes) {
+    for (const auto& triangle : triangles) {
         glBindVertexArray(VAO);
 
         glBindBuffer(GL_ARRAY_BUFFER, VBO);
-        glBufferData(GL_ARRAY_BUFFER, shape.vertices.size() * sizeof(GLfloat), shape.vertices.data(), GL_STATIC_DRAW);
+        glBufferData(GL_ARRAY_BUFFER, triangle.vertices.size() * sizeof(GLfloat), triangle.vertices.data(), GL_STATIC_DRAW);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+        glEnableVertexAttribArray(0);
 
         glBindBuffer(GL_ARRAY_BUFFER, CBO);
-        glBufferData(GL_ARRAY_BUFFER, shape.colors.size() * sizeof(GLfloat), shape.colors.data(), GL_STATIC_DRAW);
+        glBufferData(GL_ARRAY_BUFFER, triangle.colors.size() * sizeof(GLfloat), triangle.colors.data(), GL_STATIC_DRAW);
+        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+        glEnableVertexAttribArray(1);
 
-        if (shape.type == GL_POINTS) {
-            glPointSize(shape.size * 10.0f);
-        }
-
-        glDrawArrays(shape.type, 0, shape.vertices.size() / 2);
+        glDrawArrays(GL_TRIANGLES, 0, 3);
     }
 
     glutSwapBuffers();
 }
 
-void createShape(int x, int y) {
-    Shape newShape;
-    GLfloat randomColor[4] = { static_cast<GLfloat>(rand()) / RAND_MAX,
-                                static_cast<GLfloat>(rand()) / RAND_MAX,
-                                static_cast<GLfloat>(rand()) / RAND_MAX, 1.0f };
-
-    GLfloat openglX = (2.0f * x) / width - 1.0f;
-    GLfloat openglY = 1.0f - (2.0f * y) / height;
-
-    GLfloat randomSize = 1.0f + static_cast<GLfloat>(rand()) / (static_cast<GLfloat>(RAND_MAX / 2.0f));
-
-    newShape.size = randomSize;
-
-    switch (currentMode) {
-    case 'p':
-        newShape.type = GL_POINTS;
-        newShape.vertices = { openglX, openglY };
-        newShape.colors = { randomColor[0], randomColor[1], randomColor[2], randomColor[3] };
-        break;
-    case 'l':
-        newShape.type = GL_LINES;
-        newShape.vertices = { openglX, openglY,
-                              openglX + 0.1f * randomSize, openglY + 0.1f * randomSize };
-        newShape.colors = { randomColor[0], randomColor[1], randomColor[2], randomColor[3],
-                            randomColor[0], randomColor[1], randomColor[2], randomColor[3] };
-        break;
-    case 't':
-        newShape.type = GL_TRIANGLES;
-        newShape.vertices = {
-            openglX, openglY,
-            openglX + 0.1f * randomSize, openglY + 0.1f * randomSize,
-            openglX - 0.1f * randomSize, openglY + 0.1f * randomSize
-        };
-        newShape.colors = { randomColor[0], randomColor[1], randomColor[2], randomColor[3],
-                            randomColor[0], randomColor[1], randomColor[2], randomColor[3],
-                            randomColor[0], randomColor[1], randomColor[2], randomColor[3] };
-        break;
-    case 'r':
-        newShape.type = GL_TRIANGLES;
-        newShape.vertices = {
-            openglX - 0.1f * randomSize, openglY - 0.1f * randomSize,
-            openglX + 0.1f * randomSize, openglY - 0.1f * randomSize,
-            openglX + 0.1f * randomSize, openglY + 0.1f * randomSize,
-            openglX - 0.1f * randomSize, openglY - 0.1f * randomSize,
-            openglX + 0.1f * randomSize, openglY + 0.1f * randomSize,
-            openglX - 0.1f * randomSize, openglY + 0.1f * randomSize
-        };
-        newShape.colors = { randomColor[0], randomColor[1], randomColor[2], randomColor[3],
-                            randomColor[0], randomColor[1], randomColor[2], randomColor[3],
-                            randomColor[0], randomColor[1], randomColor[2], randomColor[3],
-                            randomColor[0], randomColor[1], randomColor[2], randomColor[3],
-                            randomColor[0], randomColor[1], randomColor[2], randomColor[3],
-                            randomColor[0], randomColor[1], randomColor[2], randomColor[3] };
-        break;
-    }
-
-    shapes.push_back(newShape);
-    glutPostRedisplay();
-}
-
-void mouse(int button, int state, int x, int y) {
-    if (button == GLUT_LEFT_BUTTON && state == GLUT_DOWN) {
-        createShape(x, y);
-    }
-}
-
-void moveRandomShape(int direction) {
-    if (shapes.empty()) return;
-
-    int index = rand() % shapes.size();
-    Shape& shape = shapes[index];
-
-    GLfloat moveAmount = 0.01f;
-    for (size_t i = 0; i < shape.vertices.size(); i += 2) {
-        switch (direction) {
-        case 0: shape.vertices[i + 1] += moveAmount; break; // 위
-        case 1: shape.vertices[i + 1] -= moveAmount; break; // 아래
-        case 2: shape.vertices[i] -= moveAmount; break; // 왼쪽
-        case 3: shape.vertices[i] += moveAmount; break; // 오른쪽
-        }
-    }
-
-    glutPostRedisplay();
-}
-
-void keyboard(unsigned char key, int x, int y) {
-    switch (key) {
-    case 'p': case 'l': case 't': case 'r':
-        currentMode = key;
-        break;
-    case 'c':
-        shapes.clear();
-        glutPostRedisplay();
-        break;
-    case 'w': moveRandomShape(0); break; // 위
-    case 's': moveRandomShape(1); break; // 아래
-    case 'a': moveRandomShape(2); break; // 왼쪽
-    case 'd': moveRandomShape(3); break; // 오른쪽
-    }
-}
-
-void Reshape(int w, int h) {
+GLvoid Reshape(int w, int h) {
     glViewport(0, 0, w, h);
-    width = w;
-    height = h;
 }
 
 int main(int argc, char** argv) {
-    srand(static_cast<unsigned>(time(0)));
-
     glutInit(&argc, argv);
     glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGBA);
     glutInitWindowPosition(100, 100);
     glutInitWindowSize(width, height);
-    glutCreateWindow("Shape Drawing");
+    glutCreateWindow("Four Triangles Example");
 
     glewExperimental = GL_TRUE;
     if (glewInit() != GLEW_OK) {
-        cerr << "Failed to initialize GLEW" << endl;
-        return -1;
+        std::cerr << "Unable to initialize GLEW" << std::endl;
+        exit(EXIT_FAILURE);
     }
 
-    compileShaders();
-    setupBuffers();
+    makeVertexShaders();
+    makeFragmentShaders();
+    shaderProgramID = makeShaderProgram();
 
-    glutDisplayFunc(DrawShapes);
-    glutMouseFunc(mouse);
-    glutKeyboardFunc(keyboard);
+    glGenVertexArrays(1, &VAO);
+    glGenBuffers(1, &VBO);
+    glGenBuffers(1, &CBO);
+
+    initTriangles();
+
+    glutDisplayFunc(DrawScene);
     glutReshapeFunc(Reshape);
-
-    glEnable(GL_POINT_SMOOTH);
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-    cout << "p: 점 그리기  l: 선 그리기  t: 삼각형 그리기  r: 사각형 그리기" << endl;
-    cout << "w/a/s/d: 랜덤 도형 이동 (위/왼쪽/아래/오른쪽)" << endl;
     glutMainLoop();
 
     return 0;
