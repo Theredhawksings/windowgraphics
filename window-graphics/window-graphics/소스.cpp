@@ -11,9 +11,14 @@ GLuint width = 800, height = 600;
 GLuint vertexShader, fragmentShader, shaderProgramID;
 GLuint VAO, VBO;
 
+enum DrawMode { POINTSS, LINE };
+DrawMode currentDrawMode = POINTSS;
+
 struct Vertex {
     float x, y, z;
 };
+
+int number = 0;
 
 struct Spiral {
     std::vector<Vertex> vertices;
@@ -109,7 +114,7 @@ void generateSpiral(float centerX, float centerY) {
 
     // 바깥쪽으로 나가는 나선
     float endX = centerX, endY = centerY; // 끝점 좌표 초기화
-    for (int i = 0; i <= 1080; ++i) { // 3바퀴 (360 * 3)
+    for (int i = 0; i < 1080; i+=10) { // 3바퀴 (360 * 3)
         float angle = i * 0.0174533f; // 1도를 라디안으로 변환
         float r = a + b * angle;
         float x = centerX + r * cos(angle);
@@ -130,7 +135,7 @@ void generateSpiral(float centerX, float centerY) {
     float lastR = a + b * (1079 * 0.0174533f); // 마지막 반지름
     endX += 0.2f;
 
-    for (int i = 900; i >= 0; --i) { // 역순으로 진행
+    for (int i = 900; i >= 0; i-=10) { // 역순으로 진행
         float angle = i * 0.0174533f;
         float r = lastR * (float(i) / 900); // 반지름을 줄여가며 안쪽으로 들어감
         float x = endX + r * cos(angle);
@@ -156,9 +161,16 @@ GLvoid drawScene() {
     glPointSize(1.0f);
 
     for (auto& spiral : spirals) {
+
         glBindBuffer(GL_ARRAY_BUFFER, VBO);
         glBufferData(GL_ARRAY_BUFFER, (spiral.currentPoint + 1) * sizeof(Vertex), spiral.vertices.data(), GL_DYNAMIC_DRAW);
-        glDrawArrays(GL_POINTS, 0, spiral.currentPoint + 1);
+
+        if (currentDrawMode == POINTSS) {
+            glDrawArrays(GL_POINTS, 0, spiral.currentPoint + 1);
+        }
+        else {
+            glDrawArrays(GL_LINE_STRIP_ADJACENCY, 0, spiral.currentPoint + 1);
+        }
     }
 
     glutSwapBuffers(); 
@@ -168,7 +180,7 @@ void timer(int value) {
     bool needRedisplay = false;
 
     for (auto& spiral : spirals) {
-        if (!spiral.isComplete && spiral.currentPoint <= 1980) {
+        if (!spiral.isComplete && spiral.currentPoint < spiral.vertices.size()) {
             spiral.currentPoint++;
             needRedisplay = true;
         }
@@ -187,7 +199,13 @@ void mouse(int button, int state, int x, int y) {
     if (button == GLUT_LEFT_BUTTON && state == GLUT_DOWN) {
         float centerX = (2.0f * x) / width - 1.0f;
         float centerY = 1.0f - (2.0f * y) / height;
-        generateSpiral(centerX, centerY);
+
+        for (int i = 0; i < number; i++) {
+            generateSpiral(centerX, centerY);
+            centerX += 0.1f;
+            centerY += 0.1f;
+        }
+
         glutTimerFunc(16, timer, 0); 
         glutPostRedisplay();
     }
@@ -206,6 +224,36 @@ void InitBuffer() {
     glEnableVertexAttribArray(0);
 }
 
+GLvoid keyboard(unsigned char key, int x, int y) {
+    switch (key) {
+    case 'p':
+        currentDrawMode = POINTSS;
+        break;
+    case 'l':
+        currentDrawMode = LINE;
+        break;
+    case '1':
+        number = 1;
+        break;
+    case '2':
+        number = 2;
+        break;
+    case '3':
+        number = 3;
+        break;
+    case '4':
+        number = 4;
+        break;
+    case '5':
+        number = 5;
+        break;
+    default:
+        break;
+    }
+    glutPostRedisplay();
+
+}
+
 int main(int argc, char** argv) {
     glutInit(&argc, argv);
     glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGBA);
@@ -222,8 +270,8 @@ int main(int argc, char** argv) {
     glutDisplayFunc(drawScene);
     glutReshapeFunc(Reshape);
     glutMouseFunc(mouse);  
-    glutTimerFunc(16, timer, 0);  
 
+    glutKeyboardFunc(keyboard);
     glutMainLoop();
 
     return 0;
