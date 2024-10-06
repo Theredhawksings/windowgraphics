@@ -1,420 +1,256 @@
-#define _CRT_SECURE_NO_WARNINGS 
-
-#include <iostream>
+ï»¿#include <iostream>
+#include <GL/glew.h>
+#include <GL/freeglut.h>
 #include <vector>
 #include <cstdlib>
 #include <ctime>
-#include <GL/glew.h>
-#include <GL/freeglut.h>
-#include <GL/freeglut_ext.h>
-#include <random>
-#include <ctime>
-#include <algorithm>
-#include<math.h>
+#include <fstream>
+#include <sstream>
 
-std::random_device rd;
-std::mt19937 gen(rd());
-std::uniform_real_distribution<> dis(0.0, 1.0);
+using namespace std;
 
-GLuint width = 800, height = 800;
-GLuint vertexShader, fragmentShader, shaderProgramID;
-GLint result;
-GLchar errorLog[512];
-GLuint VAO, VBO, CBO;
-
-
-int countTriangle[4];
-int count = 4;
-const double PI = 3.14159265358979323846;
-
-enum DrawMode { Nonee, bounce, zigzag, SquareSpiral, CircleSpiral };
-DrawMode currentDrawMode = Nonee;  
-
-struct Triangle {
-    std::vector<GLfloat> vertices;
-    std::vector<GLfloat> colors;
-    GLfloat dx, dy;  
-    GLfloat speed;
-    GLfloat angle; 
+struct Shape {
+    GLenum type;
+    vector<GLfloat> vertices;
+    vector<GLfloat> colors;
+    GLfloat size;
 };
 
-std::vector<Triangle> triangles(4);
+vector<Shape> shapes;
+GLint width = 800, height = 600;
+char currentMode = 'p';
 
-void initTriangles() {
-    triangles[0].vertices = { -0.6f, 0.5f, 0.0f, -0.4f, 0.5f, 0.0f, -0.5f, 0.8f, 0.0f };
-    triangles[0].colors = { 1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f };
-    triangles[0].dx = 0.01f;
-    triangles[0].dy = 0.01f;
+GLuint shaderProgram;
+GLuint VBO, VAO, CBO;
 
-    triangles[1].vertices = { 0.4f, 0.5f, 0.0f, 0.6f, 0.5f, 0.0f, 0.5f, 0.8f, 0.0f };
-    triangles[1].colors = { 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f };
-    triangles[1].dx = 0.01f;
-    triangles[1].dy = 0.01f; 
-
-    triangles[2].vertices = { -0.6f, -0.9f, 0.0f, -0.4f, -0.9f, 0.0f, -0.5f, -0.6f, 0.0f };
-    triangles[2].colors = { 1.0f, 1.0f, 0.0f, 1.0f, 1.0f, 0.0f, 1.0f, 1.0f, 0.0f };
-    triangles[2].dx = 0.01f;
-    triangles[2].dy = 0.01f; 
-
-    triangles[3].vertices = { 0.4f, -0.9f, 0.0f, 0.6f, -0.9f, 0.0f, 0.5f, -0.6f, 0.0f };
-    triangles[3].colors = { 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f };
-    triangles[3].dx = 0.01f;
-    triangles[3].dy = 0.01f;  
-
-    triangles[0].speed = 0.01f;
-    triangles[1].speed = 0.02f;
-    triangles[2].speed = 0.03f;
-    triangles[3].speed = 0.04f;
-
-    triangles[0].angle = 0.0f;
-    triangles[1].angle = PI / 2;
-    triangles[2].angle = PI;
-    triangles[3].angle = 3 * PI / 2;
-
+string loadShaderSource(const char* filename) {
+    ifstream file(filename);
+    stringstream buffer;
+    buffer << file.rdbuf();
+    return buffer.str();
 }
 
-char* filetobuf(const char* file) {
-    FILE* fptr;
-    long length;
-    char* buf;
-    fptr = fopen(file, "rb");
-    if (!fptr)
-        return NULL;
-    fseek(fptr, 0, SEEK_END);
-    length = ftell(fptr);
-    buf = (char*)malloc(length + 1);
-    fseek(fptr, 0, SEEK_SET);
-    fread(buf, length, 1, fptr);
-    fclose(fptr);
-    buf[length] = 0;
-    return buf;
-}
+GLuint compileShader(GLenum type, const char* source) {
+    GLuint shader = glCreateShader(type);
+    glShaderSource(shader, 1, &source, NULL);
+    glCompileShader(shader);
 
-void makeVertexShaders() {
-    GLchar* vertexSource = filetobuf("vertex.glsl");
-    vertexShader = glCreateShader(GL_VERTEX_SHADER);
-    glShaderSource(vertexShader, 1, &vertexSource, NULL);
-    glCompileShader(vertexShader);
-    glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &result);
-    if (!result) {
-        glGetShaderInfoLog(vertexShader, 512, NULL, errorLog);
-        std::cerr << "ERROR: vertex shader ÄÄÆÄÀÏ ½ÇÆÐ\n" << errorLog << std::endl;
-        exit(EXIT_FAILURE);
+    GLint success;
+    glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
+    if (!success) {
+        GLchar infoLog[512];
+        glGetShaderInfoLog(shader, 512, NULL, infoLog);
+        ::cerr << "ERROR::SHADER::COMPILATION_FAILED\n" << infoLog << endl;
     }
+
+    return shader;
 }
 
-void makeFragmentShaders() {
-    GLchar* fragmentSource = filetobuf("fragment.glsl");
-    fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
-    glShaderSource(fragmentShader, 1, &fragmentSource, NULL);
-    glCompileShader(fragmentShader);
-    glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &result);
-    if (!result) {
-        glGetShaderInfoLog(fragmentShader, 512, NULL, errorLog);
-        std::cerr << "ERROR: fragment shader ÄÄÆÄÀÏ ½ÇÆÐ\n" << errorLog << std::endl;
-        exit(EXIT_FAILURE);
-    }
-}
+void compileShaders() {
+    string vertexSource = loadShaderSource("vertex.glsl");
+    string fragmentSource = loadShaderSource("fragment.glsl");
 
-GLuint makeShaderProgram() {
-    GLuint shaderID = glCreateProgram();
-    glAttachShader(shaderID, vertexShader);
-    glAttachShader(shaderID, fragmentShader);
-    glLinkProgram(shaderID);
-    glGetProgramiv(shaderID, GL_LINK_STATUS, &result);
-    if (!result) {
-        glGetProgramInfoLog(shaderID, 512, NULL, errorLog);
-        std::cerr << "ERROR: shader program ¿¬°á ½ÇÆÐ\n" << errorLog << std::endl;
-        exit(EXIT_FAILURE);
+    GLuint vertexShader = compileShader(GL_VERTEX_SHADER, vertexSource.c_str());
+    GLuint fragmentShader = compileShader(GL_FRAGMENT_SHADER, fragmentSource.c_str());
+
+    shaderProgram = glCreateProgram();
+    glAttachShader(shaderProgram, vertexShader);
+    glAttachShader(shaderProgram, fragmentShader);
+    glLinkProgram(shaderProgram);
+
+    GLint success;
+    glGetProgramiv(shaderProgram, GL_LINK_STATUS, &success);
+
+    if (!success) {
+        GLchar infoLog[512];
+        glGetProgramInfoLog(shaderProgram, 512, NULL, infoLog);
+        cerr << "ERROR::SHADER::PROGRAM::LINKING_FAILED\n" << infoLog << endl;
     }
+
     glDeleteShader(vertexShader);
     glDeleteShader(fragmentShader);
-    return shaderID;
 }
 
-float toGLX(int x) {
-    return (x / 400.0f) - 1.0f;
+void setupBuffers() {
+    glGenVertexArrays(1, &VAO);
+    glGenBuffers(1, &VBO);
+    glGenBuffers(1, &CBO);
+
+    glBindVertexArray(VAO);
+
+    glBindBuffer(GL_ARRAY_BUFFER, VBO);
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), 0);
+    glEnableVertexAttribArray(0);
+
+    glBindBuffer(GL_ARRAY_BUFFER, CBO);
+    glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(float), 0);
+    glEnableVertexAttribArray(1);
+
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindVertexArray(0);
 }
 
-float toGLY(int y) {
-    return -(y / 300.0f) + 1.0f;
-    //https://stackoverflow.com/questions/33851030/convert-glut-mouse-coordinates-to-opengl
-}
-
-GLvoid DrawScene() {
-    glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+void DrawShapes() {
     glClear(GL_COLOR_BUFFER_BIT);
-    glUseProgram(shaderProgramID);
+    glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
 
-    for (const auto& triangle : triangles) {
+    glUseProgram(shaderProgram);
+
+    for (const auto& shape : shapes) {
         glBindVertexArray(VAO);
 
         glBindBuffer(GL_ARRAY_BUFFER, VBO);
-        glBufferData(GL_ARRAY_BUFFER, triangle.vertices.size() * sizeof(GLfloat), triangle.vertices.data(), GL_STATIC_DRAW);
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
-        glEnableVertexAttribArray(0);
+        glBufferData(GL_ARRAY_BUFFER, shape.vertices.size() * sizeof(GLfloat), shape.vertices.data(), GL_STATIC_DRAW);
 
         glBindBuffer(GL_ARRAY_BUFFER, CBO);
-        glBufferData(GL_ARRAY_BUFFER, triangle.colors.size() * sizeof(GLfloat), triangle.colors.data(), GL_STATIC_DRAW);
-        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
-        glEnableVertexAttribArray(1);
+        glBufferData(GL_ARRAY_BUFFER, shape.colors.size() * sizeof(GLfloat), shape.colors.data(), GL_STATIC_DRAW);
 
-        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-        glDrawArrays(GL_TRIANGLES, 0, 3);
+        if (shape.type == GL_POINTS) {
+            glPointSize(shape.size * 10.0f);
+        }
+
+        glDrawArrays(shape.type, 0, shape.vertices.size() / 2);
     }
 
     glutSwapBuffers();
 }
 
-void bounceMovement(Triangle& triangle) {
-    float moveX = triangle.dx * triangle.speed * 100;
-    float moveY = triangle.dy * triangle.speed * 100;
+void createShape(int x, int y) {
+    Shape newShape;
+    GLfloat randomColor[4] = { static_cast<GLfloat>(rand()) / RAND_MAX,
+                                static_cast<GLfloat>(rand()) / RAND_MAX,
+                                static_cast<GLfloat>(rand()) / RAND_MAX, 1.0f };
 
-    if (triangle.vertices[0] + moveX <= -1.0f || triangle.vertices[3] + moveX >= 1.0f) {
-        triangle.dx = -triangle.dx;
-        moveX = -moveX;
-    }
-    if (triangle.vertices[1] + moveY <= -1.0f || triangle.vertices[7] + moveY >= 1.0f) {
-        triangle.dy = -triangle.dy;
-        moveY = -moveY;
+    GLfloat openglX = (2.0f * x) / width - 1.0f;
+    GLfloat openglY = 1.0f - (2.0f * y) / height;
+
+    GLfloat randomSize = 1.0f + static_cast<GLfloat>(rand()) / (static_cast<GLfloat>(RAND_MAX / 2.0f));
+
+    newShape.size = randomSize;
+
+    switch (currentMode) {
+    case 'p':
+        newShape.type = GL_POINTS;
+        newShape.vertices = { openglX, openglY };
+        newShape.colors = { randomColor[0], randomColor[1], randomColor[2], randomColor[3] };
+        break;
+    case 'l':
+        newShape.type = GL_LINES;
+        newShape.vertices = { openglX, openglY,
+                              openglX + 0.1f * randomSize, openglY + 0.1f * randomSize };
+        newShape.colors = { randomColor[0], randomColor[1], randomColor[2], randomColor[3],
+                            randomColor[0], randomColor[1], randomColor[2], randomColor[3] };
+        break;
+    case 't':
+        newShape.type = GL_TRIANGLES;
+        newShape.vertices = {
+            openglX, openglY,
+            openglX + 0.1f * randomSize, openglY + 0.1f * randomSize,
+            openglX - 0.1f * randomSize, openglY + 0.1f * randomSize
+        };
+        newShape.colors = { randomColor[0], randomColor[1], randomColor[2], randomColor[3],
+                            randomColor[0], randomColor[1], randomColor[2], randomColor[3],
+                            randomColor[0], randomColor[1], randomColor[2], randomColor[3] };
+        break;
+    case 'r':
+        newShape.type = GL_TRIANGLES;
+        newShape.vertices = {
+            openglX - 0.1f * randomSize, openglY - 0.1f * randomSize,
+            openglX + 0.1f * randomSize, openglY - 0.1f * randomSize,
+            openglX + 0.1f * randomSize, openglY + 0.1f * randomSize,
+            openglX - 0.1f * randomSize, openglY - 0.1f * randomSize,
+            openglX + 0.1f * randomSize, openglY + 0.1f * randomSize,
+            openglX - 0.1f * randomSize, openglY + 0.1f * randomSize
+        };
+        newShape.colors = { randomColor[0], randomColor[1], randomColor[2], randomColor[3],
+                            randomColor[0], randomColor[1], randomColor[2], randomColor[3],
+                            randomColor[0], randomColor[1], randomColor[2], randomColor[3],
+                            randomColor[0], randomColor[1], randomColor[2], randomColor[3],
+                            randomColor[0], randomColor[1], randomColor[2], randomColor[3],
+                            randomColor[0], randomColor[1], randomColor[2], randomColor[3] };
+        break;
     }
 
-    for (size_t i = 0; i < triangle.vertices.size(); i += 3) {
-        triangle.vertices[i] += moveX;
-        triangle.vertices[i + 1] += moveY;
+    shapes.push_back(newShape);
+    glutPostRedisplay();
+}
+
+void mouse(int button, int state, int x, int y) {
+    if (button == GLUT_LEFT_BUTTON && state == GLUT_DOWN) {
+        createShape(x, y);
     }
 }
 
-void updateZigzagMovement(Triangle& triangle) {
-    const float LEFT_WALL = -1.0f;
-    const float RIGHT_WALL = 1.0f;
-    const float BOTTOM = -1.0f;
-    const float MOVE_DOWN = 0.1f;
+void moveRandomShape(int direction) {
+    if (shapes.empty()) return;
 
-    for (size_t i = 0; i < triangle.vertices.size(); i += 3) {
-        triangle.vertices[i] += triangle.dx * triangle.speed * 100;
-    }
+    int index = rand() % shapes.size();
+    Shape& shape = shapes[index];
 
-    if (triangle.vertices[0] <= LEFT_WALL || triangle.vertices[3] >= RIGHT_WALL) {
-        triangle.dx = -triangle.dx;  // ¹æÇâ ÀüÈ¯
-
-        if (triangle.vertices[1] > -1.0f && triangle.vertices[4] > -1.0f) {
-            for (size_t i = 1; i < triangle.vertices.size(); i += 3) {
-                triangle.vertices[i] -= MOVE_DOWN;
-            }
-        }
-    }
-
-    if (triangle.vertices[1] < -1.0f || triangle.vertices[4] < -1.0f){
-        triangle.vertices[1] = -1.0f;
-        triangle.vertices[4] = -1.0f;
-    }
-
-
-}
-
-const int LEFT = 0, DOWN = 1, RIGHT = 2, UP = 3;
-std::vector<int> directions;
-std::vector<float> stepsLeftVec;
-std::vector<int> laps;
-const float initialSpeed = 5.0f;
-
-void initializeSquareSpiralMovement() {
-    directions = std::vector<int>(triangles.size(), LEFT);
-    stepsLeftVec = std::vector<float>(triangles.size(), initialSpeed);
-    laps = std::vector<int>(triangles.size(), 0);
-}
-
-void updateSquareSpiralMovement(std::vector<Triangle>& triangles) {
-
-    for (size_t i = 0; i < triangles.size(); i++) {
-        Triangle& currentTriangle = triangles[i];
-        int& direction = directions[i];
-        float& stepsLeft = stepsLeftVec[i];
-        int& lap = laps[i];
-
+    GLfloat moveAmount = 0.01f;
+    for (size_t i = 0; i < shape.vertices.size(); i += 2) {
         switch (direction) {
-        case LEFT:
-            for (size_t j = 0; j < currentTriangle.vertices.size(); j += 3) {
-                currentTriangle.vertices[j] -= currentTriangle.speed;
-                if (stepsLeft <= 0) {
-                    direction = DOWN;
-                    lap++;
-                    stepsLeft = initialSpeed - 0.3f * lap;
-                    break;
-                }
-                stepsLeft -= currentTriangle.speed;
-            }
-            break;
-        case DOWN:
-            for (size_t j = 1; j < currentTriangle.vertices.size(); j += 3) {
-                currentTriangle.vertices[j] -= currentTriangle.speed;
-                if (stepsLeft <= 0) {
-                    direction = RIGHT;
-                    lap++;
-                    stepsLeft = initialSpeed - 0.3f * lap;
-                    break;
-                }
-                stepsLeft -= currentTriangle.speed;
-            }
-            break;
-        case RIGHT:
-            for (size_t j = 0; j < currentTriangle.vertices.size(); j += 3) {
-                currentTriangle.vertices[j] += currentTriangle.speed;
-                if (stepsLeft <= 0) {
-                    direction = UP;
-                    lap++;
-                    stepsLeft = initialSpeed - 0.3f * lap;
-                    break;
-                }
-                stepsLeft -= currentTriangle.speed;
-            }
-            break;
-        case UP:
-            for (size_t j = 1; j < currentTriangle.vertices.size(); j += 3) {
-                currentTriangle.vertices[j] += currentTriangle.speed;
-                if (stepsLeft <= 0) {
-                    direction = LEFT;
-                    lap++;
-                    stepsLeft = initialSpeed - 0.3f * lap;
-                    break;
-                }
-                stepsLeft -= currentTriangle.speed;
-            }
-            break;
+        case 0: shape.vertices[i + 1] += moveAmount; break; // ìœ„
+        case 1: shape.vertices[i + 1] -= moveAmount; break; // ì•„ëž˜
+        case 2: shape.vertices[i] -= moveAmount; break; // ì™¼ìª½
+        case 3: shape.vertices[i] += moveAmount; break; // ì˜¤ë¥¸ìª½
         }
-    }
-}
-
-static std::vector<double> radii(triangles.size(), 400.0);  // °¢ »ï°¢Çüº° ¹ÝÁö¸§
-void updateCircleSpiralMovement(std::vector<Triangle>& triangles) {
-    const float radiusDecreaseRate = 80;  // ¹ÝÁö¸§ °¨¼Ò ¼Óµµ
-
-    for (size_t i = 0; i < triangles.size(); i++) {
-        Triangle& currentTriangle = triangles[i];
-
-        currentTriangle.angle += currentTriangle.speed * 5;
-
-        radii[i] -= currentTriangle.speed * 5;
-        if (radii[i] < 10) radii[i] = 10;  // ¿ÏÀüÈ÷ 0ÀÌ µÇÁö ¾Êµµ·Ï
-
-        currentTriangle.vertices[0] = radii[i] * cos(currentTriangle.angle) / 400.0f;
-        currentTriangle.vertices[1] = radii[i] * sin(currentTriangle.angle) / 400.0f;
-
-        currentTriangle.vertices[3] = currentTriangle.vertices[0] + 0.2f;
-        currentTriangle.vertices[4] = currentTriangle.vertices[1];
-
-        currentTriangle.vertices[6] = currentTriangle.vertices[0] + 0.1f;
-        currentTriangle.vertices[7] = currentTriangle.vertices[1] + 0.3f;
-    }
-}
-
-void update(int value) {
-    switch (currentDrawMode) {
-    case bounce:
-        for (auto& triangle : triangles) {
-            bounceMovement(triangle);
-        }
-        break;
-    case zigzag:
-        for (auto& triangle : triangles) {
-            updateZigzagMovement(triangle);
-        }
-        break;
-    case SquareSpiral:
-        updateSquareSpiralMovement(triangles);
-        break;
-    case CircleSpiral:
-        updateCircleSpiralMovement(triangles);
-        break;
-    default:
-        break;
     }
 
     glutPostRedisplay();
-    glutTimerFunc(16, update, 0);
 }
 
 void keyboard(unsigned char key, int x, int y) {
-    initTriangles();
-    
     switch (key) {
-    case '1':
-        currentDrawMode = bounce;
+    case 'p': case 'l': case 't': case 'r':
+        currentMode = key;
         break;
-    case '2':
-        currentDrawMode = zigzag;
+    case 'c':
+        shapes.clear();
+        glutPostRedisplay();
         break;
-    case '3':
-        currentDrawMode = SquareSpiral;
-        initializeSquareSpiralMovement();
-        for (size_t i = 0; i < triangles.size(); i++) {
-            Triangle& currentTriangle = triangles[i];
-
-            // °¢ »ï°¢ÇüÀÇ ÃÊ±â À§Ä¡ ¼³Á¤
-            if (i == 0) {
-                for (size_t j = 0; j < 3; j += 3) {
-                    currentTriangle.vertices[j] = 0.7f;
-                    currentTriangle.vertices[j + 1] = 0.6f;
-                    currentTriangle.vertices[j + 3] = currentTriangle.vertices[j] + 0.2f;
-                    currentTriangle.vertices[j + 4] = currentTriangle.vertices[j + 1];
-                    currentTriangle.vertices[j + 6] = currentTriangle.vertices[j] + 0.1f;
-                    currentTriangle.vertices[j + 7] = currentTriangle.vertices[j + 1] + 0.3f;
-                }
-                currentTriangle.speed = 0.01f;  // Ã¹ ¹øÂ° »ï°¢ÇüÀÇ ¼Óµµ ¼³Á¤
-            }
-            else {
-                Triangle& previousTriangle = triangles[i - 1];
-                for (size_t j = 0; j < currentTriangle.vertices.size(); j += 3) {
-                    currentTriangle.vertices[j] = previousTriangle.vertices[j] - 0.001f;
-                    currentTriangle.vertices[j + 1] = previousTriangle.vertices[j + 1] - 0.001f;
-                }
-                currentTriangle.speed = previousTriangle.speed * 0.8f;  // ÀÌÀü »ï°¢Çü ¼ÓµµÀÇ 80%·Î ¼³Á¤
-            }
-        }
-        break;
-    case '4':
-        currentDrawMode = CircleSpiral;
-        break;
-    default:
-        break;
+    case 'w': moveRandomShape(0); break; // ìœ„
+    case 's': moveRandomShape(1); break; // ì•„ëž˜
+    case 'a': moveRandomShape(2); break; // ì™¼ìª½
+    case 'd': moveRandomShape(3); break; // ì˜¤ë¥¸ìª½
     }
-    glutPostRedisplay(); 
 }
 
-
-
-GLvoid Reshape(int w, int h) {
+void Reshape(int w, int h) {
     glViewport(0, 0, w, h);
+    width = w;
+    height = h;
 }
 
 int main(int argc, char** argv) {
+    srand(static_cast<unsigned>(time(0)));
+
     glutInit(&argc, argv);
     glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGBA);
-    glutInitWindowPosition(50, 50);
+    glutInitWindowPosition(100, 100);
     glutInitWindowSize(width, height);
-    glutCreateWindow("Four Triangles Example");
+    glutCreateWindow("Shape Drawing");
 
     glewExperimental = GL_TRUE;
     if (glewInit() != GLEW_OK) {
-        std::cerr << "Unable to initialize GLEW" << std::endl;
-        exit(EXIT_FAILURE);
+        cerr << "Failed to initialize GLEW" << endl;
+        return -1;
     }
 
-    makeVertexShaders();
-    makeFragmentShaders();
-    shaderProgramID = makeShaderProgram();
+    compileShaders();
+    setupBuffers();
 
-    glGenVertexArrays(1, &VAO);
-    glGenBuffers(1, &VBO);
-    glGenBuffers(1, &CBO);
-
-    initTriangles();
-
-    glutDisplayFunc(DrawScene);
-    glutReshapeFunc(Reshape);
+    glutDisplayFunc(DrawShapes);
+    glutMouseFunc(mouse);
     glutKeyboardFunc(keyboard);
-    glutTimerFunc(100, update, 0);
+    glutReshapeFunc(Reshape);
+
+    glEnable(GL_POINT_SMOOTH);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+    cout << "p: ì  ê·¸ë¦¬ê¸°  l: ì„  ê·¸ë¦¬ê¸°  t: ì‚¼ê°í˜• ê·¸ë¦¬ê¸°  r: ì‚¬ê°í˜• ê·¸ë¦¬ê¸°" << endl;
+    cout << "w/a/s/d: ëžœë¤ ë„í˜• ì´ë™ (ìœ„/ì™¼ìª½/ì•„ëž˜/ì˜¤ë¥¸ìª½)" << endl;
     glutMainLoop();
 
     return 0;
