@@ -1,33 +1,44 @@
-﻿#define _CRT_SECURE_NO_WARNINGS 
+﻿#define _CRT_SECURE_NO_WARNINGS
+
 #include <iostream>
 #include <vector>
-#include <cmath>
+#include <cstdlib>
+#include <ctime>
 #include <GL/glew.h>
 #include <GL/freeglut.h>
+#include <GL/freeglut_ext.h>
+#include <random>
+#include <ctime>
+#include <algorithm>
+#include <math.h>
 
-using namespace std;
+std::random_device rd;
+std::mt19937 gen(rd());
+std::uniform_real_distribution<> dis(0.0, 1.0);
 
 GLuint width = 800, height = 600;
 GLuint vertexShader, fragmentShader, shaderProgramID;
-GLuint VAO, VBO;
+GLint result;
+GLchar errorLog[512];
+GLuint VAO, VBO, CBO;
 
-enum DrawMode { POINTSS, LINE };
-DrawMode currentDrawMode = POINTSS;
+using namespace std;
 
-struct Vertex {
-    float x, y, z;
-};
+const double PI = 3.14159265358979323846;
 
-int number = 0;
+enum DrawMode { Nonee, Beeline, Triangular, Square, Pentagon };
 
-struct Spiral {
-    std::vector<Vertex> vertices;
-    int currentPoint;
+struct Shape {
+    vector<GLfloat> vertices;
+    vector<GLfloat> colors;
+    DrawMode currentDrawMode;
+    DrawMode targetDrawMode;
+    float animationProgress;
     float centerX, centerY;
-    bool isComplete;
+    GLfloat color[3]; 
 };
 
-std::vector<Spiral> spirals;
+vector<Shape> shapes(4);
 
 char* filetobuf(const char* file) {
     FILE* fptr;
@@ -46,232 +57,242 @@ char* filetobuf(const char* file) {
     return buf;
 }
 
-void make_vertexShaders(){
-    GLchar* vertexSource;
+void buildShape(vector<GLfloat>& vertices, int vertex, float CenterX, float CenterY, float r) {
+    vertices.clear();
 
-    vertexSource = filetobuf("vertex.glsl");
-    vertexShader = glCreateShader(GL_VERTEX_SHADER);
-
-    glShaderSource(vertexShader, 1, (const GLchar**)&vertexSource, 0);
-    glCompileShader(vertexShader);
-
-    GLint result;
-    GLchar errorLog[512];
-    glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &result);
-
-    if(!result){
-        glGetShaderInfoLog(vertexShader, 512, NULL, errorLog);
-        cerr << "ERROR: vertex shader 컴파일 실패\n"  << errorLog << endl;
-        return;
+    for (int i = 0; i < vertex; i++) {
+        float angle = 2.0f * PI * i / vertex;
+        float x = CenterX + r * cos(angle);
+        float y = CenterY + r * sin(angle);
+        vertices.push_back(x);
+        vertices.push_back(y);
+        vertices.push_back(0.0f);
     }
 }
 
-void make_fragmentShaders() {
-    GLchar* fragmentSource;
+void initShapes() {
 
-    fragmentSource = filetobuf("fragment.glsl");
+    shapes[0] = { vector<GLfloat>(), vector<GLfloat>(), Beeline, Beeline, 1.0f, -0.5f, 0.5f, {1.0f, 0.0f, 0.0f} };
+    shapes[1] = { vector<GLfloat>(), vector<GLfloat>(), Triangular, Triangular, 1.0f, 0.5f, 0.5f, {0.0f, 1.0f, 0.0f} };
+    shapes[2] = { vector<GLfloat>(), vector<GLfloat>(), Square, Square, 1.0f, -0.5f, -0.5f, {0.0f, 0.0f, 1.0f} };
+    shapes[3] = { vector<GLfloat>(), vector<GLfloat>(), Pentagon, Pentagon, 1.0f, 0.5f, -0.5f, {1.0f, 1.0f, 0.0f} };
+
+    for (auto& shape : shapes) {
+        buildShape(shape.vertices, 5, shape.centerX, shape.centerY, 0.3f);
+
+        shape.colors.clear();
+
+        for (int i = 0; i < shape.vertices.size() / 3; ++i) {
+            shape.colors.push_back(shape.color[0]);
+            shape.colors.push_back(shape.color[1]);
+            shape.colors.push_back(shape.color[2]);
+        }
+    }
+}
+
+void makeVertexShaders() {
+    GLchar* vertexSource = filetobuf("vertex.glsl");
+    vertexShader = glCreateShader(GL_VERTEX_SHADER);
+    glShaderSource(vertexShader, 1, &vertexSource, NULL);
+    glCompileShader(vertexShader);
+    glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &result);
+    if (!result) {
+        glGetShaderInfoLog(vertexShader, 512, NULL, errorLog);
+        std::cerr << "ERROR: vertex shader 컴파일 실패\n" << errorLog << std::endl;
+        exit(EXIT_FAILURE);
+    }
+}
+
+void makeFragmentShaders() {
+    GLchar* fragmentSource = filetobuf("fragment.glsl");
     fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
-
-    glShaderSource(fragmentShader, 1, (const GLchar**)&fragmentSource, 0);
+    glShaderSource(fragmentShader, 1, &fragmentSource, NULL);
     glCompileShader(fragmentShader);
-
-    GLint result;
-    GLchar errorLog[512];
     glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &result);
-
     if (!result) {
         glGetShaderInfoLog(fragmentShader, 512, NULL, errorLog);
-        cerr << "ERROR: fragment shader 컴파일 실패\n" << errorLog << endl;
-        return;
+        std::cerr << "ERROR: fragment shader 컴파일 실패\n" << errorLog << std::endl;
+        exit(EXIT_FAILURE);
     }
 }
 
-void make_shaderProgram(){
-    make_vertexShaders();
-    make_fragmentShaders();
-
-    shaderProgramID = glCreateProgram();
-    glAttachShader(shaderProgramID, vertexShader);
-    glAttachShader(shaderProgramID, fragmentShader);
-    glLinkProgram(shaderProgramID);
-
+GLuint makeShaderProgram() {
+    GLuint shaderID = glCreateProgram();
+    glAttachShader(shaderID, vertexShader);
+    glAttachShader(shaderID, fragmentShader);
+    glLinkProgram(shaderID);
+    glGetProgramiv(shaderID, GL_LINK_STATUS, &result);
+    if (!result) {
+        glGetProgramInfoLog(shaderID, 512, NULL, errorLog);
+        std::cerr << "ERROR: shader program 연결 실패\n" << errorLog << std::endl;
+        exit(EXIT_FAILURE);
+    }
     glDeleteShader(vertexShader);
     glDeleteShader(fragmentShader);
-
-    glUseProgram(shaderProgramID);
+    return shaderID;
 }
 
-void generateSpiral(float centerX, float centerY) {
-    Spiral newSpiral;
-    newSpiral.centerX = centerX;
-    newSpiral.centerY = centerY;
-    newSpiral.currentPoint = 0;
-    newSpiral.isComplete = false;
 
-    float a = 0.01f; // 나선의 시작 크기
-    float b = 0.01f; // 나선의 증가 속도
+void updateShapes() {
+
+    for (auto& shape : shapes) {
+
+        if (shape.currentDrawMode != shape.targetDrawMode) {
+            shape.animationProgress += 0.05f;
+            if (shape.animationProgress >= 1.0f) {
+                shape.currentDrawMode = shape.targetDrawMode;
+                shape.animationProgress = 1.0f;
+            }
+        }
+
+        int currentVertices = shape.currentDrawMode == Beeline ? 2 :
+            shape.currentDrawMode == Triangular ? 3 :
+            shape.currentDrawMode == Square ? 4 : 5;
 
 
-    // 바깥쪽으로 나가는 나선
-    float endX = centerX, endY = centerY; // 끝점 좌표 초기화
-    for (int i = 0; i < 1080; i+=10) { // 3바퀴 (360 * 3)
-        float angle = i * 0.0174533f; // 1도를 라디안으로 변환
-        float r = a + b * angle;
-        float x = centerX + r * cos(angle);
-        float y = centerY + r * sin(angle);
+        int targetVertices = shape.targetDrawMode == Beeline ? 2 :
+            shape.targetDrawMode == Triangular ? 3 :
+            shape.targetDrawMode == Square ? 4 : 5;
 
-        float red = (sin(angle) + 1.0f) / 2.0f;
-        float green = (cos(angle) + 1.0f) / 2.0f;
-        float blue = (sin(angle * 0.5f) + 1.0f) / 2.0f;
+        vector<GLfloat> interpolatedVertices;
 
-        newSpiral.vertices.push_back({ x, y, 0.0f});
+        for (int i = 0; i < currentVertices; i++) {
+            float startAngle = 2.0f * PI * i / currentVertices;
+            float endAngle = 2.0f * PI * i / targetVertices;
+            float interpolatedAngle = startAngle + shape.animationProgress * (endAngle - startAngle);
 
-        endX = x; // 끝점 업데이트
-        endY = y;
+            float x = shape.centerX + 0.3f * cos(interpolatedAngle);
+            float y = shape.centerY + 0.3f * sin(interpolatedAngle);
+
+            interpolatedVertices.push_back(x);
+            interpolatedVertices.push_back(y);
+            interpolatedVertices.push_back(0.0f);
+        }
+
+        shape.vertices = interpolatedVertices;
     }
-    
-
-    // 안쪽으로 들어가는 나선
-    float lastR = a + b * (1079 * 0.0174533f); // 마지막 반지름
-    endX += 0.2f;
-
-    for (int i = 900; i >= 0; i-=10) { // 역순으로 진행
-        float angle = i * 0.0174533f;
-        float r = lastR * (float(i) / 900); // 반지름을 줄여가며 안쪽으로 들어감
-        float x = endX + r * cos(angle);
-        float y = endY + r * sin(angle);
-
-        float red = (cos(angle) + 1.0f) / 2.0f;
-        float green = (sin(angle) + 1.0f) / 2.0f;
-        float blue = (cos(angle * 0.5f) + 1.0f) / 2.0f;
-
-        newSpiral.vertices.push_back({ x, y, 0.0f});
-    }
-
-    spirals.push_back(newSpiral);
 }
 
-GLvoid drawScene() {
-    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+GLvoid DrawScene() {
+    glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
-
     glUseProgram(shaderProgramID);
-    glBindVertexArray(VAO);
 
-    glPointSize(1.0f);
-
-    for (auto& spiral : spirals) {
+    for (const auto& shape : shapes) {
+        glBindVertexArray(VAO);
 
         glBindBuffer(GL_ARRAY_BUFFER, VBO);
-        glBufferData(GL_ARRAY_BUFFER, (spiral.currentPoint + 1) * sizeof(Vertex), spiral.vertices.data(), GL_DYNAMIC_DRAW);
+        glBufferData(GL_ARRAY_BUFFER, shape.vertices.size() * sizeof(GLfloat), shape.vertices.data(), GL_STATIC_DRAW);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+        glEnableVertexAttribArray(0);
 
-        if (currentDrawMode == POINTSS) {
-            glDrawArrays(GL_POINTS, 0, spiral.currentPoint + 1);
-        }
-        else {
-            glDrawArrays(GL_LINE_STRIP_ADJACENCY, 0, spiral.currentPoint + 1);
+        glBindBuffer(GL_ARRAY_BUFFER, CBO);
+        glBufferData(GL_ARRAY_BUFFER, shape.colors.size() * sizeof(GLfloat), shape.colors.data(), GL_STATIC_DRAW);
+        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+        glEnableVertexAttribArray(1);
+
+        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+
+        switch (shape.currentDrawMode) {
+        case Beeline:
+            glDrawArrays(GL_LINES, 0, 2);
+            break;
+        case Triangular:
+            glDrawArrays(GL_TRIANGLES, 0, 3);
+            break;
+        case Square:
+            glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+            break;
+        case Pentagon:
+            glDrawArrays(GL_TRIANGLE_FAN, 0, 5);
+            break;
+        default:
+            break;
         }
     }
 
-    glutSwapBuffers(); 
+    glutSwapBuffers();
 }
 
-void timer(int value) {
-    bool needRedisplay = false;
-
-    for (auto& spiral : spirals) {
-        if (!spiral.isComplete && spiral.currentPoint < spiral.vertices.size()) {
-            spiral.currentPoint++;
-            needRedisplay = true;
-        }
-        else if (!spiral.isComplete) {
-            spiral.isComplete = true;
-        }
-    }
-
-    if (needRedisplay) {
-        glutPostRedisplay();
-        glutTimerFunc(16, timer, 0);  // 약 60fps
-    }
-}
-
-void mouse(int button, int state, int x, int y) {
-    if (button == GLUT_LEFT_BUTTON && state == GLUT_DOWN) {
-        float centerX = (2.0f * x) / width - 1.0f;
-        float centerY = 1.0f - (2.0f * y) / height;
-
-        for (int i = 0; i < number; i++) {
-            generateSpiral(centerX, centerY);
-            centerX += 0.1f;
-            centerY += 0.1f;
-        }
-
-        glutTimerFunc(16, timer, 0); 
-        glutPostRedisplay();
-    }
-}
-
-GLvoid Reshape(int w, int h){
-    glViewport(0, 0, w, h);
-}
-
-void InitBuffer() {
-    glGenVertexArrays(1, &VAO);
-    glGenBuffers(1, &VBO);
-    glBindVertexArray(VAO);
-    glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)0);
-    glEnableVertexAttribArray(0);
-}
-
-GLvoid keyboard(unsigned char key, int x, int y) {
+void keyboard(unsigned char key, int x, int y) {
     switch (key) {
-    case 'p':
-        currentDrawMode = POINTSS;
-        break;
     case 'l':
-        currentDrawMode = LINE;
+        for (auto& shape : shapes) {
+            if (shape.currentDrawMode == Beeline) {
+                shape.targetDrawMode = Triangular;
+                shape.animationProgress = 0.0f;
+            }
+        }
         break;
-    case '1':
-        number = 1;
+    case 't':
+        for (auto& shape : shapes) {
+            if (shape.currentDrawMode == Triangular) {
+                shape.targetDrawMode = Square;
+                shape.animationProgress = 0.0f;
+            }
+        }
         break;
-    case '2':
-        number = 2;
+    case 'r':
+        for (auto& shape : shapes) {
+            if (shape.currentDrawMode == Square) {
+                shape.targetDrawMode = Pentagon;
+                shape.animationProgress = 0.0f;
+            }
+        }
         break;
-    case '3':
-        number = 3;
+    case 'p':
+        for (auto& shape : shapes) {
+            if (shape.currentDrawMode == Pentagon) {
+                shape.targetDrawMode = Beeline;
+                shape.animationProgress = 0.0f;
+            }
+        }
         break;
-    case '4':
-        number = 4;
-        break;
-    case '5':
-        number = 5;
+    case 'a':
+        initShapes();
         break;
     default:
         break;
     }
-    glutPostRedisplay();
+}
 
+void TimerFunction(int value) {
+    updateShapes();
+    glutPostRedisplay();
+    glutTimerFunc(16, TimerFunction, 1);
+}
+
+GLvoid Reshape(int w, int h) {
+    glViewport(0, 0, w, h);
 }
 
 int main(int argc, char** argv) {
     glutInit(&argc, argv);
     glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGBA);
-    glutInitWindowPosition(100, 100);
-    glutInitWindowSize(800, 600);
-    glutCreateWindow("Example1");
+    glutInitWindowPosition(50, 50);
+    glutInitWindowSize(width, height);
+    glutCreateWindow("Four Animated Shapes Example");
 
     glewExperimental = GL_TRUE;
-    glewInit();
+    if (glewInit() != GLEW_OK) {
+        std::cerr << "Unable to initialize GLEW" << std::endl;
+        exit(EXIT_FAILURE);
+    }
 
-    make_shaderProgram();
-    InitBuffer();
+    makeVertexShaders();
+    makeFragmentShaders();
+    shaderProgramID = makeShaderProgram();
 
-    glutDisplayFunc(drawScene);
+    glGenVertexArrays(1, &VAO);
+    glGenBuffers(1, &VBO);
+    glGenBuffers(1, &CBO);
+
+    initShapes();
+
+    glutDisplayFunc(DrawScene);
     glutReshapeFunc(Reshape);
-    glutMouseFunc(mouse);  
-
     glutKeyboardFunc(keyboard);
+    glutTimerFunc(16, TimerFunction, 1);
     glutMainLoop();
 
     return 0;
