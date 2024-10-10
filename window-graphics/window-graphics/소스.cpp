@@ -8,291 +8,365 @@
 #include <GL/freeglut.h>
 #include <GL/freeglut_ext.h>
 #include <random>
-#include <ctime>
 #include <algorithm>
 #include <math.h>
-
-std::random_device rd;
-std::mt19937 gen(rd());
-std::uniform_real_distribution<> dis(0.0, 1.0);
-
-GLuint width = 800, height = 600;
-GLuint vertexShader, fragmentShader, shaderProgramID;
-GLint result;
-GLchar errorLog[512];
-GLuint VAO, VBO, CBO;
 
 using namespace std;
 
 const double PI = 3.14159265358979323846;
 
-enum DrawMode { Nonee, Beeline, Triangular, Square, Pentagon };
+random_device rd;
+mt19937 gen(rd());
+uniform_real_distribution<> dis(0.0, 1.0);
+
+GLuint width = 800, height = 600;
+GLuint vShader, fShader, shaderProg;
+GLuint vao, vbo, cbo;
+
+enum ShapeType { DOT = 1, LINE, TRI, QUAD, PENTA, HEXA };
+enum AnimationType { NONE, LINEAR };
 
 struct Shape {
-    vector<GLfloat> vertices;
+    vector<GLfloat> verts;
     vector<GLfloat> colors;
-    DrawMode currentDrawMode;
-    DrawMode targetDrawMode;
-    float animationProgress;
-    float centerX, centerY;
-    GLfloat color[3]; 
+    ShapeType type;
+    float x, y;
+    float size;
+    bool picked;
+    AnimationType anim;
+    float dx, dy;
+    bool isMerged;
 };
 
-vector<Shape> shapes(4);
+vector<Shape> shapes;
+int pickedIdx = -1;
+bool isDrag = false;
+float dragX, dragY;
 
-char* filetobuf(const char* file) {
-    FILE* fptr;
-    long length;
-    char* buf;
-    fptr = fopen(file, "rb");
-    if (!fptr)
-        return NULL;
-    fseek(fptr, 0, SEEK_END);
-    length = ftell(fptr);
-    buf = (char*)malloc(length + 1);
-    fseek(fptr, 0, SEEK_SET);
-    fread(buf, length, 1, fptr);
-    fclose(fptr);
-    buf[length] = 0;
-    return buf;
-}
+void makeShape(vector<GLfloat>& v, ShapeType type, float x, float y, float size) {
+    v.clear();
+    float r = 0.1f * size;
 
-void buildShape(vector<GLfloat>& vertices, int vertex, float CenterX, float CenterY, float r) {
-    vertices.clear();
-
-    for (int i = 0; i < vertex; i++) {
-        float angle = 2.0f * PI * i / vertex;
-        float x = CenterX + r * cos(angle);
-        float y = CenterY + r * sin(angle);
-        vertices.push_back(x);
-        vertices.push_back(y);
-        vertices.push_back(0.0f);
+    if (type == DOT) {
+        v = { x - r / 5, y - r / 5, 0, x + r / 5, y - r / 5, 0, x + r / 5, y + r / 5, 0, x - r / 5, y + r / 5, 0 };
+    }
+    else if (type == LINE) {
+        v = { x - r, y, 0, x + r, y, 0 };
+    }
+    else {
+        for (int i = 0; i < type; i++) {
+            float angle = 2.0f * PI * i / type;
+            v.push_back(x + r * cos(angle));
+            v.push_back(y + r * sin(angle));
+            v.push_back(0.0f);
+        }
     }
 }
 
 void initShapes() {
+    shapes.clear();
+    for (int i = 0; i < 15; i++) {
+        Shape s;
+        s.type = static_cast<ShapeType>(dis(gen) * 5 + 1);
+        s.x = dis(gen) * 2 - 1;
+        s.y = dis(gen) * 2 - 1;
+        s.size = dis(gen) * 0.5 + 0.5;
+        s.picked = false;
+        s.anim = NONE;
+        s.dx = s.dy = 0;
+        s.isMerged = false;
 
-    shapes[0] = { vector<GLfloat>(), vector<GLfloat>(), Beeline, Beeline, 1.0f, -0.5f, 0.5f, {1.0f, 0.0f, 0.0f} };
-    shapes[1] = { vector<GLfloat>(), vector<GLfloat>(), Triangular, Triangular, 1.0f, 0.5f, 0.5f, {0.0f, 1.0f, 0.0f} };
-    shapes[2] = { vector<GLfloat>(), vector<GLfloat>(), Square, Square, 1.0f, -0.5f, -0.5f, {0.0f, 0.0f, 1.0f} };
-    shapes[3] = { vector<GLfloat>(), vector<GLfloat>(), Pentagon, Pentagon, 1.0f, 0.5f, -0.5f, {1.0f, 1.0f, 0.0f} };
+        makeShape(s.verts, s.type, s.x, s.y, s.size);
 
-    for (auto& shape : shapes) {
-        buildShape(shape.vertices, 5, shape.centerX, shape.centerY, 0.3f);
-
-        shape.colors.clear();
-
-        for (int i = 0; i < shape.vertices.size() / 3; ++i) {
-            shape.colors.push_back(shape.color[0]);
-            shape.colors.push_back(shape.color[1]);
-            shape.colors.push_back(shape.color[2]);
+        for (int j = 0; j < s.type * 3; j++) {
+            s.colors.push_back(dis(gen));
         }
+
+        shapes.push_back(s);
     }
 }
 
-void makeVertexShaders() {
-    GLchar* vertexSource = filetobuf("vertex.glsl");
-    vertexShader = glCreateShader(GL_VERTEX_SHADER);
-    glShaderSource(vertexShader, 1, &vertexSource, NULL);
-    glCompileShader(vertexShader);
-    glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &result);
+
+char* readShader(const char* filename) {
+    FILE* file = fopen(filename, "rb");
+    if (!file) {
+        std::cerr << "Cannot open shader file!" << std::endl;
+        return nullptr;
+    }
+
+    fseek(file, 0, SEEK_END);
+    long length = ftell(file);
+    char* content = new char[length + 1];
+    fseek(file, 0, SEEK_SET);
+
+    fread(content, 1, length, file);
+    content[length] = 0;
+    fclose(file);
+
+    return content;
+}
+
+void makeVertexShader() {
+    GLchar* vertexSource = readShader("vertex.glsl");
+    if (!vertexSource) return;
+
+    vShader = glCreateShader(GL_VERTEX_SHADER);
+    glShaderSource(vShader, 1, &vertexSource, NULL);
+    glCompileShader(vShader);
+
+    GLint result;
+    GLchar errorLog[512];
+    glGetShaderiv(vShader, GL_COMPILE_STATUS, &result);
     if (!result) {
-        glGetShaderInfoLog(vertexShader, 512, NULL, errorLog);
+        glGetShaderInfoLog(vShader, 512, NULL, errorLog);
         std::cerr << "ERROR: vertex shader 컴파일 실패\n" << errorLog << std::endl;
-        exit(EXIT_FAILURE);
     }
+    delete[] vertexSource;
 }
 
-void makeFragmentShaders() {
-    GLchar* fragmentSource = filetobuf("fragment.glsl");
-    fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
-    glShaderSource(fragmentShader, 1, &fragmentSource, NULL);
-    glCompileShader(fragmentShader);
-    glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &result);
+void makeFragmentShader() {
+    GLchar* fragmentSource = readShader("fragment.glsl");
+    if (!fragmentSource) return;
+
+    fShader = glCreateShader(GL_FRAGMENT_SHADER);
+    glShaderSource(fShader, 1, &fragmentSource, NULL);
+    glCompileShader(fShader);
+
+    GLint result;
+    GLchar errorLog[512];
+    glGetShaderiv(fShader, GL_COMPILE_STATUS, &result);
     if (!result) {
-        glGetShaderInfoLog(fragmentShader, 512, NULL, errorLog);
+        glGetShaderInfoLog(fShader, 512, NULL, errorLog);
         std::cerr << "ERROR: fragment shader 컴파일 실패\n" << errorLog << std::endl;
-        exit(EXIT_FAILURE);
     }
+    delete[] fragmentSource;
 }
 
-GLuint makeShaderProgram() {
-    GLuint shaderID = glCreateProgram();
-    glAttachShader(shaderID, vertexShader);
-    glAttachShader(shaderID, fragmentShader);
-    glLinkProgram(shaderID);
-    glGetProgramiv(shaderID, GL_LINK_STATUS, &result);
+void makeShaders() {
+    makeVertexShader();
+    makeFragmentShader();
+
+    shaderProg = glCreateProgram();
+    glAttachShader(shaderProg, vShader);
+    glAttachShader(shaderProg, fShader);
+    glLinkProgram(shaderProg);
+
+    GLint result;
+    GLchar errorLog[512];
+    glGetProgramiv(shaderProg, GL_LINK_STATUS, &result);
     if (!result) {
-        glGetProgramInfoLog(shaderID, 512, NULL, errorLog);
+        glGetProgramInfoLog(shaderProg, 512, NULL, errorLog);
         std::cerr << "ERROR: shader program 연결 실패\n" << errorLog << std::endl;
-        exit(EXIT_FAILURE);
     }
-    glDeleteShader(vertexShader);
-    glDeleteShader(fragmentShader);
-    return shaderID;
+
+    glDeleteShader(vShader);
+    glDeleteShader(fShader);
 }
 
-
-void updateShapes() {
-
-    for (auto& shape : shapes) {
-
-        if (shape.currentDrawMode != shape.targetDrawMode) {
-            shape.animationProgress += 0.05f;
-            if (shape.animationProgress >= 1.0f) {
-                shape.currentDrawMode = shape.targetDrawMode;
-                shape.animationProgress = 1.0f;
-            }
-        }
-
-        int currentVertices = shape.currentDrawMode == Beeline ? 2 :
-            shape.currentDrawMode == Triangular ? 3 :
-            shape.currentDrawMode == Square ? 4 : 5;
-
-
-        int targetVertices = shape.targetDrawMode == Beeline ? 2 :
-            shape.targetDrawMode == Triangular ? 3 :
-            shape.targetDrawMode == Square ? 4 : 5;
-
-        vector<GLfloat> interpolatedVertices;
-
-        for (int i = 0; i < currentVertices; i++) {
-            float startAngle = 2.0f * PI * i / currentVertices;
-            float endAngle = 2.0f * PI * i / targetVertices;
-            float interpolatedAngle = startAngle + shape.animationProgress * (endAngle - startAngle);
-
-            float x = shape.centerX + 0.3f * cos(interpolatedAngle);
-            float y = shape.centerY + 0.3f * sin(interpolatedAngle);
-
-            interpolatedVertices.push_back(x);
-            interpolatedVertices.push_back(y);
-            interpolatedVertices.push_back(0.0f);
-        }
-
-        shape.vertices = interpolatedVertices;
-    }
-}
-
-GLvoid DrawScene() {
+void drawScene() {
     glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
-    glUseProgram(shaderProgramID);
+    glUseProgram(shaderProg);
 
-    for (const auto& shape : shapes) {
-        glBindVertexArray(VAO);
+    for (const auto& s : shapes) {
+        glBindVertexArray(vao);
 
-        glBindBuffer(GL_ARRAY_BUFFER, VBO);
-        glBufferData(GL_ARRAY_BUFFER, shape.vertices.size() * sizeof(GLfloat), shape.vertices.data(), GL_STATIC_DRAW);
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+        glBindBuffer(GL_ARRAY_BUFFER, vbo);
+        glBufferData(GL_ARRAY_BUFFER, s.verts.size() * sizeof(GLfloat), s.verts.data(), GL_STATIC_DRAW);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), 0);
         glEnableVertexAttribArray(0);
 
-        glBindBuffer(GL_ARRAY_BUFFER, CBO);
-        glBufferData(GL_ARRAY_BUFFER, shape.colors.size() * sizeof(GLfloat), shape.colors.data(), GL_STATIC_DRAW);
-        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+        glBindBuffer(GL_ARRAY_BUFFER, cbo);
+        glBufferData(GL_ARRAY_BUFFER, s.colors.size() * sizeof(GLfloat), s.colors.data(), GL_STATIC_DRAW);
+        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), 0);
         glEnableVertexAttribArray(1);
 
         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
-        switch (shape.currentDrawMode) {
-        case Beeline:
-            glDrawArrays(GL_LINES, 0, 2);
-            break;
-        case Triangular:
-            glDrawArrays(GL_TRIANGLES, 0, 3);
-            break;
-        case Square:
+        if (s.picked) {
+            glLineWidth(3.0f);
+            glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+        }
+
+        switch (s.type) {
+        case DOT:
+        case QUAD:
             glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
             break;
-        case Pentagon:
-            glDrawArrays(GL_TRIANGLE_FAN, 0, 5);
+        case LINE:
+            glDrawArrays(GL_LINES, 0, 2);
             break;
-        default:
+        case TRI:
+        case PENTA:
+        case HEXA:
+            glDrawArrays(GL_TRIANGLE_FAN, 0, s.type);
             break;
+        }
+
+        if (s.picked) {
+            glLineWidth(1.0f);
+            glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
         }
     }
 
     glutSwapBuffers();
 }
 
-void keyboard(unsigned char key, int x, int y) {
-    switch (key) {
-    case 'l':
-        for (auto& shape : shapes) {
-            if (shape.currentDrawMode == Beeline) {
-                shape.targetDrawMode = Triangular;
-                shape.animationProgress = 0.0f;
+void reshape(int w, int h) {
+    glViewport(0, 0, w, h);
+}
+
+int findShape(float x, float y) {
+    for (int i = shapes.size() - 1; i >= 0; i--) {
+        float dx = x - shapes[i].x;
+        float dy = y - shapes[i].y;
+        if (dx * dx + dy * dy < shapes[i].size * shapes[i].size * 0.01) {
+            return i;
+        }
+    }
+    return -1;
+}
+
+void mergeShapes(int idx1, int idx2) {
+    Shape& s1 = shapes[idx1];
+    Shape& s2 = shapes[idx2];
+
+    int newVertices = s1.type + s2.type;
+    if (newVertices > 6) newVertices = 1;
+
+    ShapeType newType = static_cast<ShapeType>(newVertices);
+    float newX = (s1.x + s2.x) / 2.0f;
+    float newY = (s1.y + s2.y) / 2.0f;
+    float newSize = (s1.size + s2.size) / 2.0f;
+
+    vector<GLfloat> newVerts;
+    makeShape(newVerts, newType, newX, newY, newSize);
+
+    vector<GLfloat> newColors;
+    for (int i = 0; i < newVertices; i++) {
+        int i1 = i % s1.type;
+        int i2 = i % s2.type;
+        for (int j = 0; j < 3; j++) {
+            float newColor = (s1.colors[i1 * 3 + j] + s2.colors[i2 * 3 + j]) / 2.0f;
+            newColors.push_back(newColor);
+        }
+    }
+
+    s1.type = newType;
+    s1.x = newX;
+    s1.y = newY;
+    s1.size = newSize;
+    s1.verts = newVerts;
+    s1.colors = newColors;
+    s1.anim = LINEAR;
+    s1.dx = (dis(gen) * 0.02 - 0.01);
+    s1.dy = (dis(gen) * 0.02 - 0.01);
+    s1.isMerged = true;
+
+    shapes.erase(shapes.begin() + idx2);
+}
+
+void mouse(int button, int state, int x, int y) {
+    float nx = (2.0f * x) / width - 1.0f;
+    float ny = 1.0f - (2.0f * y) / height;
+
+    if (button == GLUT_LEFT_BUTTON && state == GLUT_DOWN) {
+        int idx = findShape(nx, ny);
+        if (idx != -1) {
+            pickedIdx = idx;
+            shapes[idx].picked = true;
+            isDrag = true;
+            dragX = nx - shapes[idx].x;
+            dragY = ny - shapes[idx].y;
+        }
+    }
+    else if (button == GLUT_LEFT_BUTTON && state == GLUT_UP) {
+        if (isDrag && pickedIdx != -1) {
+            int targetIdx = findShape(nx, ny);
+            if (targetIdx != -1 && targetIdx != pickedIdx) {
+                mergeShapes(pickedIdx, targetIdx);
+                pickedIdx = -1;
             }
         }
-        break;
-    case 't':
-        for (auto& shape : shapes) {
-            if (shape.currentDrawMode == Triangular) {
-                shape.targetDrawMode = Square;
-                shape.animationProgress = 0.0f;
-            }
+        isDrag = false;
+        for (auto& s : shapes) {
+            s.picked = false;
         }
-        break;
-    case 'r':
-        for (auto& shape : shapes) {
-            if (shape.currentDrawMode == Square) {
-                shape.targetDrawMode = Pentagon;
-                shape.animationProgress = 0.0f;
-            }
-        }
-        break;
-    case 'p':
-        for (auto& shape : shapes) {
-            if (shape.currentDrawMode == Pentagon) {
-                shape.targetDrawMode = Beeline;
-                shape.animationProgress = 0.0f;
-            }
-        }
-        break;
-    case 'a':
-        initShapes();
-        break;
-    default:
-        break;
+    }
+    glutPostRedisplay();
+}
+
+void motion(int x, int y) {
+    if (isDrag && pickedIdx != -1) {
+        float nx = (2.0f * x) / width - 1.0f;
+        float ny = 1.0f - (2.0f * y) / height;
+        shapes[pickedIdx].x = nx - dragX;
+        shapes[pickedIdx].y = ny - dragY;
+        makeShape(shapes[pickedIdx].verts, shapes[pickedIdx].type,
+            shapes[pickedIdx].x, shapes[pickedIdx].y,
+            shapes[pickedIdx].size);
+        glutPostRedisplay();
     }
 }
 
-void TimerFunction(int value) {
-    updateShapes();
-    glutPostRedisplay();
-    glutTimerFunc(16, TimerFunction, 1);
+bool checkCollision(const Shape& s1, const Shape& s2) {
+    float dx = s1.x - s2.x;
+    float dy = s1.y - s2.y;
+    float distance = sqrt(dx * dx + dy * dy);
+    return distance < (s1.size + s2.size) * 0.1;
 }
 
-GLvoid Reshape(int w, int h) {
-    glViewport(0, 0, w, h);
+void updateShapes() {
+    for (auto& s : shapes) {
+        if (!s.isMerged) continue;  // 병합된 도형만 업데이트
+
+        s.x += s.dx;
+        s.y += s.dy;
+
+        // 화면 경계에 도달하면 방향 전환
+        if (s.x <= -1 || s.x >= 1) s.dx = -s.dx;
+        if (s.y <= -1 || s.y >= 1) s.dy = -s.dy;
+
+        // 화면 내에 유지
+        s.x = std::max(-1.0f, std::min(1.0f, s.x));
+        s.y = std::max(-1.0f, std::min(1.0f, s.y));
+
+        makeShape(s.verts, s.type, s.x, s.y, s.size);
+    }
+    glutPostRedisplay();
+}
+
+void timer(int value) {
+    updateShapes();
+    glutTimerFunc(16, timer, 0); // 약 60 FPS
 }
 
 int main(int argc, char** argv) {
     glutInit(&argc, argv);
     glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGBA);
-    glutInitWindowPosition(50, 50);
+    glutInitWindowPosition(100, 100);
     glutInitWindowSize(width, height);
-    glutCreateWindow("Four Animated Shapes Example");
+    glutCreateWindow("Animated Shape Merging");
 
     glewExperimental = GL_TRUE;
     if (glewInit() != GLEW_OK) {
-        std::cerr << "Unable to initialize GLEW" << std::endl;
+        std::cerr << "GLEW 초기화 실패" << std::endl;
         exit(EXIT_FAILURE);
     }
 
-    makeVertexShaders();
-    makeFragmentShaders();
-    shaderProgramID = makeShaderProgram();
+    makeShaders();
 
-    glGenVertexArrays(1, &VAO);
-    glGenBuffers(1, &VBO);
-    glGenBuffers(1, &CBO);
+    glGenVertexArrays(1, &vao);
+    glGenBuffers(1, &vbo);
+    glGenBuffers(1, &cbo);
 
     initShapes();
 
-    glutDisplayFunc(DrawScene);
-    glutReshapeFunc(Reshape);
-    glutKeyboardFunc(keyboard);
-    glutTimerFunc(16, TimerFunction, 1);
+    glutDisplayFunc(drawScene);
+    glutReshapeFunc(reshape);
+    glutMouseFunc(mouse);
+    glutMotionFunc(motion);
+    glutTimerFunc(0, timer, 0);
     glutMainLoop();
 
     return 0;
