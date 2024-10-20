@@ -30,23 +30,22 @@ std::array<bool, 4> tetrahedronFaceVisible = { false, false, false, false };
 glm::mat4 model, view, projection;
 
 
-// 각 면에 대한 색상 정의
-std::array<glm::vec3, 6> faceColors = {
-    glm::vec3(1.0f, 0.0f, 0.0f),  // 빨강 (면 1)
-    glm::vec3(0.0f, 1.0f, 0.0f),  // 초록 (면 2)
-    glm::vec3(0.0f, 0.0f, 1.0f),  // 파랑 (면 3)
-    glm::vec3(1.0f, 1.0f, 0.0f),  // 노랑 (면 4)
-    glm::vec3(1.0f, 0.0f, 1.0f),  // 마젠타 (면 5)
-    glm::vec3(0.0f, 1.0f, 1.0f)   // 시안 (면 6)
-};
+// faceColors 배열 수정 (각 면의 모서리에 대한 색상)
+std::array<std::array<glm::vec3, 4>, 6> faceColors = { {
+    {{glm::vec3(1.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f), glm::vec3(1.0f, 1.0f, 0.0f)}},
+    {{glm::vec3(0.0f, 1.0f, 1.0f), glm::vec3(1.0f, 0.0f, 1.0f), glm::vec3(0.5f, 0.5f, 0.5f), glm::vec3(0.8f, 0.2f, 0.6f)}},
+    {{glm::vec3(0.2f, 0.8f, 0.2f), glm::vec3(0.9f, 0.1f, 0.1f), glm::vec3(0.1f, 0.1f, 0.9f), glm::vec3(0.7f, 0.7f, 0.1f)}},
+    {{glm::vec3(0.5f, 0.2f, 0.8f), glm::vec3(0.3f, 0.6f, 0.4f), glm::vec3(0.8f, 0.8f, 0.2f), glm::vec3(0.1f, 0.9f, 0.7f)}},
+    {{glm::vec3(0.6f, 0.3f, 0.1f), glm::vec3(0.2f, 0.7f, 0.9f), glm::vec3(0.9f, 0.5f, 0.3f), glm::vec3(0.4f, 0.1f, 0.8f)}},
+    {{glm::vec3(0.8f, 0.1f, 0.5f), glm::vec3(0.3f, 0.9f, 0.2f), glm::vec3(0.7f, 0.4f, 0.6f), glm::vec3(0.1f, 0.5f, 0.9f)}}
+} };
 
-
-std::array<glm::vec3, 4> tetrahedronFaceColors = {
-    glm::vec3(1.0f, 0.5f, 0.0f),  // 주황 (면 1)
-    glm::vec3(0.5f, 0.0f, 0.5f),  // 보라 (면 2)
-    glm::vec3(0.0f, 0.5f, 0.5f),  // 청록 (면 3)
-    glm::vec3(0.5f, 0.5f, 0.0f)   // 올리브 (면 4)
-};
+std::array<std::array<glm::vec3, 3>, 4> tetrahedronFaceColors = { {
+    {{glm::vec3(1.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f)}},
+    {{glm::vec3(1.0f, 1.0f, 0.0f), glm::vec3(0.0f, 1.0f, 1.0f), glm::vec3(1.0f, 0.0f, 1.0f)}},
+    {{glm::vec3(0.5f, 0.5f, 0.5f), glm::vec3(0.8f, 0.2f, 0.6f), glm::vec3(0.2f, 0.8f, 0.4f)}},
+    {{glm::vec3(0.7f, 0.3f, 0.1f), glm::vec3(0.1f, 0.7f, 0.3f), glm::vec3(0.3f, 0.1f, 0.7f)}}
+} };
 
 
 struct Vertex {
@@ -99,8 +98,8 @@ std::vector<GLuint> tetrahedronIndices;
 }
 
 
-template<size_t N>
-void read_obj_file(const char* filename, std::vector<Vertex>& vertexData, std::vector<GLuint>& indices, const std::array<glm::vec3, N>& colors) {
+template<size_t N, size_t M>
+void read_obj_file(const char* filename, std::vector<Vertex>& vertexData, std::vector<GLuint>& indices, const std::array<std::array<glm::vec3, M>, N>& colors) {
     std::ifstream file(filename);
     if (!file.is_open()) {
         std::cerr << "Error opening file: " << filename << std::endl;
@@ -132,7 +131,7 @@ void read_obj_file(const char* filename, std::vector<Vertex>& vertexData, std::v
             std::string v1, v2, v3;
             iss >> v1 >> v2 >> v3;
 
-            auto process_vertex = [&](const std::string& v) {
+            auto process_vertex = [&](const std::string& v, int vertexIndex) {
                 std::istringstream vss(v);
                 std::string index_str;
                 std::vector<int> vertex_indices;
@@ -151,15 +150,15 @@ void read_obj_file(const char* filename, std::vector<Vertex>& vertexData, std::v
                 if (vertex_indices.size() > 2 && vertex_indices[2] != -1) {
                     vertex.normal = temp_normals[vertex_indices[2]];
                 }
-                vertex.color = colors[faceIndex % N];  // N은 colors 배열의 크기
+                vertex.color = colors[faceIndex % N][vertexIndex % M];
                 vertex.faceIndex = faceIndex;
                 vertexData.push_back(vertex);
                 return vertexData.size() - 1;
                 };
 
-            indices.push_back(process_vertex(v1));
-            indices.push_back(process_vertex(v2));
-            indices.push_back(process_vertex(v3));
+            indices.push_back(process_vertex(v1, 0));
+            indices.push_back(process_vertex(v2, 1));
+            indices.push_back(process_vertex(v3, 2));
 
             faceIndex++;
         }
