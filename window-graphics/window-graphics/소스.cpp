@@ -1,4 +1,5 @@
 ﻿#define _CRT_SECURE_NO_WARNINGS
+
 #include <iostream>
 #include <fstream>
 #include <sstream>
@@ -24,13 +25,23 @@ GLuint axisVAO, axisVBO;
 const float axisLength = 5.0f;
 
 std::vector<GLuint> indices;
-std::array<bool, 6> cubeFaceVisible = { false, false, false, false, false, false };
-std::array<bool, 4> tetrahedronFaceVisible = { false, false, false, false };
+
+bool showCube = false;
+bool showPyramid = false;
+bool isHiddenSurfaceRemoval = true;
+bool isWireframe = false;
 
 glm::mat4 model, view, projection;
 
+float xOrbitAngle = 0.0f;
+float yOrbitAngle = 0.0f;
+bool xOrbitActive = false;
+bool yOrbitActive = false;
+int xOrbitDirection = 1;
+int yOrbitDirection = 1;
+const float orbitRadius = 2.0f;
 
-// faceColors 배열 수정 (각 면의 모서리에 대한 색상)
+
 std::array<std::array<glm::vec3, 4>, 6> faceColors = { {
     {{glm::vec3(1.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f), glm::vec3(1.0f, 1.0f, 0.0f)}},
     {{glm::vec3(0.0f, 1.0f, 1.0f), glm::vec3(1.0f, 0.0f, 1.0f), glm::vec3(0.5f, 0.5f, 0.5f), glm::vec3(0.8f, 0.2f, 0.6f)}},
@@ -40,11 +51,12 @@ std::array<std::array<glm::vec3, 4>, 6> faceColors = { {
     {{glm::vec3(0.8f, 0.1f, 0.5f), glm::vec3(0.3f, 0.9f, 0.2f), glm::vec3(0.7f, 0.4f, 0.6f), glm::vec3(0.1f, 0.5f, 0.9f)}}
 } };
 
-std::array<std::array<glm::vec3, 3>, 4> tetrahedronFaceColors = { {
+std::array<std::array<glm::vec3, 3>, 5> pyramidFaceColors = { {
     {{glm::vec3(1.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f)}},
     {{glm::vec3(1.0f, 1.0f, 0.0f), glm::vec3(0.0f, 1.0f, 1.0f), glm::vec3(1.0f, 0.0f, 1.0f)}},
     {{glm::vec3(0.5f, 0.5f, 0.5f), glm::vec3(0.8f, 0.2f, 0.6f), glm::vec3(0.2f, 0.8f, 0.4f)}},
-    {{glm::vec3(0.7f, 0.3f, 0.1f), glm::vec3(0.1f, 0.7f, 0.3f), glm::vec3(0.3f, 0.1f, 0.7f)}}
+    {{glm::vec3(0.7f, 0.3f, 0.1f), glm::vec3(0.1f, 0.7f, 0.3f), glm::vec3(0.3f, 0.1f, 0.7f)}},
+    {{glm::vec3(0.9f, 0.9f, 0.1f), glm::vec3(0.1f, 0.9f, 0.9f), glm::vec3(0.9f, 0.1f, 0.9f)}}
 } };
 
 
@@ -57,14 +69,17 @@ struct Vertex {
 
 std::vector<Vertex> cubeVertexData;
 std::vector<GLuint> cubeIndices;
-std::vector<Vertex> tetrahedronVertexData;
-std::vector<GLuint> tetrahedronIndices;
+std::vector<Vertex> pyramidVertexData;
+std::vector<GLuint> pyramidIndices;
 
+glm::vec3 objectPosition(0.0f, 0.0f, 0.0f);
+const float moveSpeed = 0.1f;
 
-void initAxes() {std::vector<Vertex> cubeVertexData;
-std::vector<GLuint> cubeIndices;
-std::vector<Vertex> tetrahedronVertexData;
-std::vector<GLuint> tetrahedronIndices;
+void initAxes() {
+    std::vector<Vertex> cubeVertexData;
+    std::vector<GLuint> cubeIndices;
+    std::vector<Vertex> tetrahedronVertexData;
+    std::vector<GLuint> tetrahedronIndices;
 
     float axisVertices[] = {
         // 위치              // 노멀 (사용하지 않음)   // 색상
@@ -229,12 +244,10 @@ void InitBuffer() {
     glGenVertexArrays(2, vao);  // vao 배열 전체를 전달
     glGenBuffers(4, vbo);
 
-    // 큐브 데이터 설정
     glBindVertexArray(vao[0]);
     glBindBuffer(GL_ARRAY_BUFFER, vbo[0]);
     glBufferData(GL_ARRAY_BUFFER, cubeVertexData.size() * sizeof(Vertex), cubeVertexData.data(), GL_STATIC_DRAW);
 
-    // 정점 속성 설정 (큐브)
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)0);
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, normal));
@@ -242,16 +255,13 @@ void InitBuffer() {
     glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, color));
     glEnableVertexAttribArray(2);
 
-    // 큐브 인덱스 버퍼
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbo[1]);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, cubeIndices.size() * sizeof(GLuint), cubeIndices.data(), GL_STATIC_DRAW);
 
-    // 정사면체 데이터 설정
     glBindVertexArray(vao[1]);
     glBindBuffer(GL_ARRAY_BUFFER, vbo[2]);
-    glBufferData(GL_ARRAY_BUFFER, tetrahedronVertexData.size() * sizeof(Vertex), tetrahedronVertexData.data(), GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, pyramidVertexData.size() * sizeof(Vertex), pyramidVertexData.data(), GL_STATIC_DRAW);
 
-    // 정점 속성 설정 (정사면체)
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)0);
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, normal));
@@ -259,9 +269,8 @@ void InitBuffer() {
     glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, color));
     glEnableVertexAttribArray(2);
 
-    // 정사면체 인덱스 버퍼
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbo[3]);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, tetrahedronIndices.size() * sizeof(GLuint), tetrahedronIndices.data(), GL_STATIC_DRAW);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, pyramidIndices.size() * sizeof(GLuint), pyramidIndices.data(), GL_STATIC_DRAW);
 
     glBindVertexArray(0);
 }
@@ -285,37 +294,101 @@ void selectRandomFaces(std::array<bool, N>& faceArray) {
 }
 
 void keyboardCallback(unsigned char key, int x, int y) {
+
     switch (key) {
+        // 기존 키 처리 유지
     case 'c':
-    case 'C':
-        selectRandomFaces(cubeFaceVisible);
+        showCube = !showCube;
         break;
-    case 't':
-    case 'T':
-        selectRandomFaces(tetrahedronFaceVisible);
+    case 'p':
+        showPyramid = !showPyramid;
         break;
-    case '1':
-    case '2':
-    case '3':
-    case '4':
-    case '5':
-    case '6':
-        cubeFaceVisible[key - '1'] = !cubeFaceVisible[key - '1'];
-        break;
-    case '7':
-    case '8':
-    case '9':
-    case '0':
-    {
-        int index = (key == '0') ? 3 : (key - '7');
-        if (index >= 0 && index < 4) {
-            tetrahedronFaceVisible[index] = !tetrahedronFaceVisible[index];
+    case 'h':
+        isHiddenSurfaceRemoval = !isHiddenSurfaceRemoval;
+
+        if (isHiddenSurfaceRemoval) {
+            glEnable(GL_DEPTH_TEST);
         }
+        else {
+            glDisable(GL_DEPTH_TEST);
+        }
+        break;
+
+    case 'w':
+        isWireframe = !isWireframe;
+
+        if (isWireframe) {
+            glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+        }
+        else {
+            glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+        }
+        break;
+
+    case 'x':
+        xOrbitActive = true;
+        xOrbitDirection = 1;
+        break;
+    case 'X':
+        xOrbitActive = true;
+        xOrbitDirection = -1;
+        break;
+    case 'y':
+        yOrbitActive = true;
+        yOrbitDirection = 1;
+        break;
+    case 'Y':
+        yOrbitActive = true;
+        yOrbitDirection = -1;
+        break;
+
+    case 's':
+        objectPosition = glm::vec3(0.0f, 0.0f, 0.0f);
+        xOrbitActive = false;
+        yOrbitActive = false;
+        xOrbitAngle = 0.0f;
+        yOrbitAngle = 0.0f;
+        break;
     }
-    break;
+
+    
+
+    glutPostRedisplay();
+}
+
+void specialKeyCallback(int key, int x, int y) {
+    switch (key) {
+    case GLUT_KEY_LEFT:
+        objectPosition.x -= moveSpeed;
+        break;
+    case GLUT_KEY_RIGHT:
+        objectPosition.x += moveSpeed;
+        break;
+    case GLUT_KEY_UP:
+        objectPosition.y += moveSpeed;
+        break;
+    case GLUT_KEY_DOWN:
+        objectPosition.y -= moveSpeed;
+        break;
     }
     glutPostRedisplay();
 }
+
+void timer(int value) {
+    if (xOrbitActive) {
+        xOrbitAngle += 1.0f * xOrbitDirection;
+        if (xOrbitAngle > 360.0f) xOrbitAngle -= 360.0f;
+        if (xOrbitAngle < 0.0f) xOrbitAngle += 360.0f;
+    }
+    if (yOrbitActive) {
+        yOrbitAngle += 1.0f * yOrbitDirection;
+        if (yOrbitAngle > 360.0f) yOrbitAngle -= 360.0f;
+        if (yOrbitAngle < 0.0f) yOrbitAngle += 360.0f;
+    }
+    glutPostRedisplay();
+    glutTimerFunc(16, timer, 0);  // 약 60 FPS
+}
+
 
 GLvoid drawScene() {
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
@@ -323,53 +396,54 @@ GLvoid drawScene() {
 
     glUseProgram(shaderProgramID);
 
-    // 카메라 위치 조정
     view = glm::lookAt(glm::vec3(5.0f, 5.0f, 5.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
     projection = glm::perspective(glm::radians(45.0f), (float)width / (float)height, 0.1f, 100.0f);
 
     GLuint modelLoc = glGetUniformLocation(shaderProgramID, "model");
     GLuint viewLoc = glGetUniformLocation(shaderProgramID, "view");
     GLuint projectionLoc = glGetUniformLocation(shaderProgramID, "projection");
-    GLuint isAxisLoc = glGetUniformLocation(shaderProgramID, "isAxis");
     GLuint lightPosLoc = glGetUniformLocation(shaderProgramID, "lightPos");
 
     glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
     glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, glm::value_ptr(projection));
-    glUniform3f(lightPosLoc, 5.0f, 5.0f, 5.0f);  // 광원 위치 전달
+    glUniform3f(lightPosLoc, 5.0f, 5.0f, 5.0f);
 
-    glBindVertexArray(vao[0]);
-    model = glm::mat4(1.0f);
-    model = glm::translate(model, glm::vec3(-1.5f, 0.0f, 0.0f));
-    model = glm::rotate(model, glm::radians(60.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-    model = glm::scale(model, glm::vec3(2.0f, 2.0f, 2.0f));
-    glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
 
-    for (int i = 0; i < 6; i++) {
-        if (cubeFaceVisible[i]) {
-            glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, (void*)(i * 6 * sizeof(GLuint)));
-        }
+    if (showCube) {
+        glBindVertexArray(vao[0]);
+        model = glm::mat4(1.0f);
+        model = glm::translate(model, objectPosition);
+        model = glm::rotate(model, glm::radians(yOrbitAngle), glm::vec3(0.0f, 1.0f, 0.0f));
+        model = glm::rotate(model, glm::radians(xOrbitAngle), glm::vec3(1.0f, 0.0f, 0.0f));
+        model = glm::translate(model, glm::vec3(orbitRadius, 0.0f, 0.0f));
+        model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));
+        glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+        glDrawElements(GL_TRIANGLES, cubeIndices.size(), GL_UNSIGNED_INT, 0);
     }
 
-    // 사면체 그리기
-    glBindVertexArray(vao[1]);
-    model = glm::mat4(1.0f);
-    model = glm::translate(model, glm::vec3(1.5f, 0.0f, 0.0f));
-    model = glm::rotate(model, glm::radians(60.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-    model = glm::scale(model, glm::vec3(2.0f, 2.0f, 2.0f));
-    glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-
-    for (int i = 0; i < 4; i++) {
-        if (tetrahedronFaceVisible[i]) {
-            glDrawElements(GL_TRIANGLES, 3, GL_UNSIGNED_INT, (void*)(i * 3 * sizeof(GLuint)));
-        }
+    if (showPyramid) {
+        glBindVertexArray(vao[1]);
+        model = glm::mat4(1.0f);
+        model = glm::translate(model, objectPosition);
+        model = glm::rotate(model, glm::radians(yOrbitAngle + 180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+        model = glm::rotate(model, glm::radians(xOrbitAngle + 180.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+        model = glm::translate(model, glm::vec3(orbitRadius, 0.0f, 0.0f));
+        model = glm::rotate(model, glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+        model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));
+        glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+        glDrawElements(GL_TRIANGLES, pyramidIndices.size(), GL_UNSIGNED_INT, 0);
     }
 
-    // 축 그리기
-    model = glm::mat4(1.0f); // 축에는 회전 적용 안 함
+    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+
+    model = glm::mat4(1.0f);
     glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-    glUniform1i(isAxisLoc, 1);  // 축임을 표시
     glBindVertexArray(axisVAO);
     glDrawArrays(GL_LINES, 0, 6);
+
+    if (!isWireframe) {
+        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+    }
 
     glutSwapBuffers();
 }
@@ -393,7 +467,7 @@ int main(int argc, char** argv) {
     }
 
     read_obj_file("cube.obj", cubeVertexData, cubeIndices, faceColors);
-    read_obj_file("tetrahedron.obj", tetrahedronVertexData, tetrahedronIndices, tetrahedronFaceColors);
+    read_obj_file("pyramid.obj", pyramidVertexData, pyramidIndices, pyramidFaceColors);
 
     make_shaderProgram();
     InitBuffer();
@@ -403,7 +477,9 @@ int main(int argc, char** argv) {
 
     glutDisplayFunc(drawScene);
     glutReshapeFunc(Reshape);
-    glutKeyboardFunc(keyboardCallback);  // 키보드 콜백 함수 등록
+    glutKeyboardFunc(keyboardCallback); 
+    glutSpecialFunc(specialKeyCallback);
+    glutTimerFunc(0, timer, 0);
 
     glutMainLoop();
 
