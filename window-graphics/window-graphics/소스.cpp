@@ -82,7 +82,6 @@ void initAxes() {
     std::vector<GLuint> tetrahedronIndices;
 
     float axisVertices[] = {
-        // 위치              // 노멀 (사용하지 않음)   // 색상
         0.0f, 0.0f, 0.0f,    0.0f, 0.0f, 0.0f,         1.0f, 0.0f, 0.0f,  // X축 시작
         axisLength, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,      1.0f, 0.0f, 0.0f,  // X축 끝
         0.0f, 0.0f, 0.0f,    0.0f, 0.0f, 0.0f,         0.0f, 1.0f, 0.0f,  // Y축 시작
@@ -412,10 +411,8 @@ GLvoid drawScene() {
     if (showCube) {
         glBindVertexArray(vao[0]);
         model = glm::mat4(1.0f);
-        model = glm::translate(model, objectPosition);
-        model = glm::rotate(model, glm::radians(yOrbitAngle), glm::vec3(0.0f, 1.0f, 0.0f));
-        model = glm::rotate(model, glm::radians(xOrbitAngle), glm::vec3(1.0f, 0.0f, 0.0f));
-        model = glm::translate(model, glm::vec3(orbitRadius, 0.0f, 0.0f));
+        model = glm::rotate(model, glm::radians(yOrbitAngle), glm::vec3(0.0f, 1.0f, 0.0f));  // y축 회전
+        model = glm::rotate(model, glm::radians(xOrbitAngle), glm::vec3(1.0f, 0.0f, 0.0f));  // x축 회전
         model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));
         glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
         glDrawElements(GL_TRIANGLES, cubeIndices.size(), GL_UNSIGNED_INT, 0);
@@ -424,10 +421,8 @@ GLvoid drawScene() {
     if (showPyramid) {
         glBindVertexArray(vao[1]);
         model = glm::mat4(1.0f);
-        model = glm::translate(model, objectPosition);
-        model = glm::rotate(model, glm::radians(yOrbitAngle + 180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-        model = glm::rotate(model, glm::radians(xOrbitAngle + 180.0f), glm::vec3(1.0f, 0.0f, 0.0f));
-        model = glm::translate(model, glm::vec3(orbitRadius, 0.0f, 0.0f));
+        model = glm::rotate(model, glm::radians(yOrbitAngle), glm::vec3(0.0f, 1.0f, 0.0f));  // y축 회전
+        model = glm::rotate(model, glm::radians(xOrbitAngle), glm::vec3(1.0f, 0.0f, 0.0f));  // x축 회전
         model = glm::rotate(model, glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
         model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));
         glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
