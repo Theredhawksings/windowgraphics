@@ -16,8 +16,8 @@
 
 GLint width, height;
 GLuint vertexShader, fragmentShader, shaderProgramID;
-GLuint vao[5];
-GLuint vbo[10];
+GLuint vao[4];
+GLuint vbo[8];
 GLint result;
 GLchar errorLog[512];
 
@@ -41,18 +41,43 @@ int xOrbitDirection = 1;
 int yOrbitDirection = 1;
 const float orbitRadius = 2.0f;
 
-bool change = true;
 
-std::array<std::array<glm::vec3, 4>, 6> faceColors = { {
-    {{glm::vec3(1.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f), glm::vec3(1.0f, 1.0f, 0.0f)}},
-    {{glm::vec3(0.0f, 1.0f, 1.0f), glm::vec3(1.0f, 0.0f, 1.0f), glm::vec3(0.5f, 0.5f, 0.5f), glm::vec3(0.8f, 0.2f, 0.6f)}},
-    {{glm::vec3(0.2f, 0.8f, 0.2f), glm::vec3(0.9f, 0.1f, 0.1f), glm::vec3(0.1f, 0.1f, 0.9f), glm::vec3(0.7f, 0.7f, 0.1f)}},
-    {{glm::vec3(0.5f, 0.2f, 0.8f), glm::vec3(0.3f, 0.6f, 0.4f), glm::vec3(0.8f, 0.8f, 0.2f), glm::vec3(0.1f, 0.9f, 0.7f)}},
-    {{glm::vec3(0.6f, 0.3f, 0.1f), glm::vec3(0.2f, 0.7f, 0.9f), glm::vec3(0.9f, 0.5f, 0.3f), glm::vec3(0.4f, 0.1f, 0.8f)}},
-    {{glm::vec3(0.8f, 0.1f, 0.5f), glm::vec3(0.3f, 0.9f, 0.2f), glm::vec3(0.7f, 0.4f, 0.6f), glm::vec3(0.1f, 0.5f, 0.9f)}}
-} };
+enum AnimationState {
+    NONE,
+    SPIRAL,
+    THROUGH_ORIGIN,
+    ORBIT_EXCHANGE,
+    UP_DOWN_EXCHANGE,
+    SCALE_ROTATE_ORBIT
+};
 
-std::array<std::array<glm::vec3, 3>, 17> coneFaceColors = { {
+AnimationState animationState = NONE;
+float animationProgress = 0.0f;
+const float animationSpeed = 0.02f;
+
+
+std::array<std::array<glm::vec3, 3>, 12> faceColors = { {
+
+        {glm::vec3(1.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f)},
+        {glm::vec3(1.0f, 1.0f, 0.0f), glm::vec3(0.0f, 1.0f, 1.0f), glm::vec3(1.0f, 0.0f, 1.0f)},
+
+        {glm::vec3(0.2f, 0.8f, 0.2f), glm::vec3(0.9f, 0.1f, 0.1f), glm::vec3(0.1f, 0.1f, 0.9f)},
+        {glm::vec3(0.3f, 0.6f, 0.4f), glm::vec3(0.8f, 0.8f, 0.2f), glm::vec3(0.1f, 0.9f, 0.7f)},
+
+        {glm::vec3(0.2f, 0.8f, 0.2f), glm::vec3(0.9f, 0.1f, 0.1f), glm::vec3(0.1f, 0.1f, 0.9f)},
+        {glm::vec3(0.3f, 0.6f, 0.4f), glm::vec3(0.8f, 0.8f, 0.2f), glm::vec3(0.1f, 0.9f, 0.7f)},
+
+        {glm::vec3(0.5f, 0.2f, 0.8f), glm::vec3(0.3f, 0.6f, 0.4f), glm::vec3(0.8f, 0.8f, 0.2f)},
+        {glm::vec3(0.7f, 0.4f, 0.5f), glm::vec3(0.3f, 0.9f, 0.2f), glm::vec3(0.7f, 0.4f, 0.6f)},
+
+        {glm::vec3(0.6f, 0.3f, 0.1f), glm::vec3(0.2f, 0.7f, 0.9f), glm::vec3(0.9f, 0.5f, 0.3f)},
+        {glm::vec3(0.8f, 0.1f, 0.5f), glm::vec3(0.3f, 0.9f, 0.2f), glm::vec3(0.7f, 0.4f, 0.6f)},
+
+        {glm::vec3(0.8f, 0.1f, 0.5f), glm::vec3(0.3f, 0.9f, 0.2f), glm::vec3(0.7f, 0.4f, 0.6f)},
+        {glm::vec3(0.6f, 0.3f, 0.1f), glm::vec3(0.2f, 0.7f, 0.9f), glm::vec3(0.9f, 0.5f, 0.3f)}
+    } };
+
+std::array<std::array<glm::vec3, 3>, 16> coneFaceColors = { {
 
         {{glm::vec3(0.8f, 0.2f, 0.3f), glm::vec3(0.7f, 0.3f, 0.4f), glm::vec3(0.9f, 0.1f, 0.2f)}},  
         {{glm::vec3(0.2f, 0.8f, 0.4f), glm::vec3(0.3f, 0.7f, 0.5f), glm::vec3(0.1f, 0.9f, 0.3f)}},  
@@ -71,26 +96,7 @@ std::array<std::array<glm::vec3, 3>, 17> coneFaceColors = { {
         {{glm::vec3(0.3f, 0.7f, 0.8f), glm::vec3(0.2f, 0.8f, 0.7f), glm::vec3(0.4f, 0.6f, 0.9f)}},  
         {{glm::vec3(0.7f, 0.2f, 0.2f), glm::vec3(0.8f, 0.3f, 0.1f), glm::vec3(0.6f, 0.1f, 0.3f)}},  
         {{glm::vec3(0.1f, 0.8f, 0.5f), glm::vec3(0.2f, 0.7f, 0.6f), glm::vec3(0.3f, 0.9f, 0.4f)}},  
-        {{glm::vec3(0.6f, 0.4f, 0.8f), glm::vec3(0.5f, 0.3f, 0.9f), glm::vec3(0.7f, 0.5f, 0.7f)}}   
     } };
-
-std::array<std::array<glm::vec3, 3>, 4> prismFaceColors = { {
-        {{glm::vec3(1.0f, 0.0f, 0.0f), glm::vec3(0.9f, 0.0f, 0.0f), glm::vec3(0.8f, 0.0f, 0.0f)}},
-        {{glm::vec3(0.8f, 0.0f, 0.0f), glm::vec3(0.75f, 0.0f, 1.0f), glm::vec3(0.6f, 0.0f, 0.0f)}},
-        {{glm::vec3(0.6f, 0.0f, 0.0f), glm::vec3(0.1f, 1.0f, 0.0f), glm::vec3(0.4f, 0.0f, 1.0f)}},
-        {{glm::vec3(0.2f, 0.0f, 0.0f), glm::vec3(0.4f, 0.0f, 1.0f), glm::vec3(0.2f, 1.0f, 0.0f)}},
-
-} };
-
-
-std::array<std::array<glm::vec3, 4>, 6> face2Colors = { {
-    {{glm::vec3(1.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f), glm::vec3(1.0f, 1.0f, 0.0f)}},
-    {{glm::vec3(0.0f, 1.0f, 1.0f), glm::vec3(1.0f, 0.0f, 1.0f), glm::vec3(0.5f, 0.5f, 0.5f), glm::vec3(0.8f, 0.2f, 0.6f)}},
-    {{glm::vec3(0.2f, 0.8f, 0.2f), glm::vec3(0.9f, 0.1f, 0.1f), glm::vec3(0.1f, 0.1f, 0.9f), glm::vec3(0.7f, 0.7f, 0.1f)}},
-    {{glm::vec3(0.5f, 0.2f, 0.8f), glm::vec3(0.3f, 0.6f, 0.4f), glm::vec3(0.8f, 0.8f, 0.2f), glm::vec3(0.1f, 0.9f, 0.7f)}},
-    {{glm::vec3(0.6f, 0.3f, 0.1f), glm::vec3(0.2f, 0.7f, 0.9f), glm::vec3(0.9f, 0.5f, 0.3f), glm::vec3(0.4f, 0.1f, 0.8f)}},
-    {{glm::vec3(0.8f, 0.1f, 0.5f), glm::vec3(0.3f, 0.9f, 0.2f), glm::vec3(0.7f, 0.4f, 0.6f), glm::vec3(0.1f, 0.5f, 0.9f)}}
-} };
 
 struct Vertex {
     glm::vec3 position;
@@ -103,21 +109,25 @@ std::vector<Vertex> cubeVertexData;
 std::vector<GLuint> cubeIndices;
 std::vector<Vertex> coneVertexData; 
 std::vector<GLuint> coneIndices;    
-std::vector<Vertex> prismVertexData;
-std::vector<GLuint> prismIndices;
-std::vector<Vertex> rect_prismVertexData;
-std::vector<GLuint> rect_prismIndices;
-
 
 glm::vec3 objectPosition(0.0f, 0.0f, 0.0f);
 const float moveSpeed = 0.1f;
 
-bool leftObjectRotate = true; 
-bool rightObjectRotate = true; 
-float rotationAngle = 0.0f;
-bool rotationActive = false; 
-int rotationDirection = 1;  
 
+glm::vec3 leftObjectPosition(-3.0f, 0.0f, 0.0f);
+glm::vec3 rightObjectPosition(3.0f, 0.0f, 0.0f);
+
+
+float leftObjectScale = 1.0f;     
+float rightObjectScale = 1.0f;    
+float scaleSpeed = 0.1f;
+float minScale = 0.1f;
+bool isScaleFromOrigin = false;
+
+
+GLuint spiralVAO, spiralVBO;
+std::vector<glm::vec3> spiralPoints;  
+bool showSpiral = false;
 
 void initAxes() {
     std::vector<Vertex> cubeVertexData;
@@ -286,6 +296,7 @@ void make_shaderProgram() {
     glUseProgram(shaderProgramID);
 }
 
+
 void InitBuffer() {
     glGenVertexArrays(4, vao);
     glGenBuffers(8, vbo);
@@ -318,147 +329,278 @@ void InitBuffer() {
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbo[3]);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, coneIndices.size() * sizeof(GLuint), coneIndices.data(), GL_STATIC_DRAW);
 
-
-    glBindVertexArray(vao[2]);
-    glBindBuffer(GL_ARRAY_BUFFER, vbo[4]);
-    glBufferData(GL_ARRAY_BUFFER, prismVertexData.size() * sizeof(Vertex), prismVertexData.data(), GL_STATIC_DRAW);
-
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)0);
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, normal));
-    glEnableVertexAttribArray(1);
-    glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, color));
-    glEnableVertexAttribArray(2);
-
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbo[5]);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, prismIndices.size() * sizeof(GLuint), prismIndices.data(), GL_STATIC_DRAW);
-
-
-    glBindVertexArray(vao[3]);
-    glBindBuffer(GL_ARRAY_BUFFER, vbo[6]);
-    glBufferData(GL_ARRAY_BUFFER, prismVertexData.size() * sizeof(Vertex), prismVertexData.data(), GL_STATIC_DRAW);
-
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)0);
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, normal));
-    glEnableVertexAttribArray(1);
-    glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, color));
-    glEnableVertexAttribArray(2);
-
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbo[7]);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, prismIndices.size() * sizeof(GLuint), prismIndices.data(), GL_STATIC_DRAW);
-
-
     glBindVertexArray(0);
 }
 
-template<size_t N>
-void selectRandomFaces(std::array<bool, N>& faceArray) {
-    std::fill(faceArray.begin(), faceArray.end(), false);
 
-    std::random_device rd;
-    std::mt19937 gen(rd());
-    std::uniform_int_distribution<> dis(0, N - 1);
+bool isSpiralAnimation = false;
+float spiralAngle = 0.0f;
+float spiralRadius = 0.0f;
+const float spiralSpeed = 1.0f;       
+const float spiralGrowth = 0.05f;     
+const float maxSpiralRadius = 6.0f; 
 
-    int count = 0;
-    while (count < 2) {
-        int face = dis(gen);
-        if (!faceArray[face]) {
-            faceArray[face] = true;
-            count++;
-        }
+void generateSpiralPoints() {
+    spiralPoints.clear();
+    const float maxAngle = 1440.0f;  
+    const float angleStep = 1.0f;     
+    const float radiusGrowth = 0.005f; 
+
+    for (float angle = 0.0f; angle <= maxAngle; angle += angleStep) {
+        float radius = radiusGrowth * angle;
+        float x = radius * cos(glm::radians(angle));
+        float z = radius * sin(glm::radians(angle));
+        spiralPoints.push_back(glm::vec3(x, 0.0f, z));
     }
+
+    glGenVertexArrays(1, &spiralVAO);
+    glGenBuffers(1, &spiralVBO);
+
+    glBindVertexArray(spiralVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, spiralVBO);
+    glBufferData(GL_ARRAY_BUFFER, spiralPoints.size() * sizeof(glm::vec3), spiralPoints.data(), GL_STATIC_DRAW);
+
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+    glEnableVertexAttribArray(0);
+
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindVertexArray(0);
+}
+
+int currentPoint = 0;
+
+void renderSpiral() {
+    glBindVertexArray(spiralVAO);
+    glLineWidth(2.0f);
+
+    glm::vec3 normal = glm::vec3(0.0f, 1.0f, 0.0f);
+    glUniform3f(glGetUniformLocation(shaderProgramID, "Normal"), normal.x, normal.y, normal.z);
+
+    glDrawArrays(GL_LINE_STRIP, 0, spiralPoints.size());
+    glBindVertexArray(0);
+}
+
+
+
+void timer(int value) {
+
+    if (animationState != NONE) {
+        animationProgress += animationSpeed;
+
+        if (animationState == SPIRAL) {
+            showSpiral = true;
+            currentPoint = (currentPoint + 2) % spiralPoints.size();
+            glm::vec3 spiralPos = spiralPoints[currentPoint];
+            leftObjectPosition = spiralPos;
+            rightObjectPosition = -spiralPos;
+        }
+
+        else if (animationState == THROUGH_ORIGIN) {
+            float t = glm::min(animationProgress, 1.0f);
+            leftObjectPosition = glm::mix(glm::vec3(-3.0f, 0.0f, 0.0f),
+                glm::vec3(3.0f, 0.0f, 0.0f), t);
+            rightObjectPosition = glm::mix(glm::vec3(3.0f, 0.0f, 0.0f),
+                glm::vec3(-3.0f, 0.0f, 0.0f), t);
+
+            if (t >= 1.0f) {
+                animationState = NONE;
+                animationProgress = 0.0f;
+            }
+        }
+
+        else if (animationState == ORBIT_EXCHANGE) {
+            float t = glm::min(animationProgress, 1.0f);
+            float angle = t * glm::pi<float>();  
+
+            float leftX = -orbitRadius * cos(angle);    
+            float leftZ = orbitRadius * sin(angle);     
+
+            float rightX = orbitRadius * cos(angle);    
+            float rightZ = -orbitRadius * sin(angle);   
+
+            leftObjectPosition = glm::vec3(leftX, 0.0f, leftZ);
+            rightObjectPosition = glm::vec3(rightX, 0.0f, rightZ);
+
+            if (t >= 1.2f) {
+                animationState = NONE;
+                animationProgress = 0.0f;
+                leftObjectPosition = glm::vec3(3.0f, 0.0f, 0.0f);
+                rightObjectPosition = glm::vec3(-3.0f, 0.0f, 0.0f);
+            }
+        }
+
+        else if (animationState == UP_DOWN_EXCHANGE) {
+
+            float t = glm::min(animationProgress, 1.0f);
+            const float maxHeight = 3.0f;  
+
+            float curve = sin(t * glm::pi<float>());
+
+            float leftX = glm::mix(-3.0f, 3.0f, t); 
+            float leftY = maxHeight * curve; 
+
+            float rightX = glm::mix(3.0f, -3.0f, t); 
+            float rightY = -maxHeight * curve; 
+
+            leftObjectPosition = glm::vec3(leftX, leftY, 0.0f);
+            rightObjectPosition = glm::vec3(rightX, rightY, 0.0f);
+
+            if (t >= 1.0f) {
+                animationState = NONE;
+                animationProgress = 0.0f;
+                leftObjectPosition = glm::vec3(3.0f, 0.0f, 0.0f);
+                rightObjectPosition = glm::vec3(-3.0f, 0.0f, 0.0f);
+            }
+        }
+
+        else if (animationState == SCALE_ROTATE_ORBIT) {
+             
+
+            animationProgress -= 0.027f;
+
+            if (animationProgress < 0.001f) {
+                animationProgress = 0.001f;
+            }
+
+            float t = glm::min(animationProgress, 1.0f);
+
+            leftObjectScale = 1.0f + t;
+            rightObjectScale = 1.0f - 0.5f * t;
+
+       
+            float rotationAngle = t * 360.0f;
+
+
+            float orbitAngle = t * glm::pi<float>() * 4.0f;  
+
+
+            float radius = 3.0f;
+            leftObjectPosition = glm::vec3(
+                radius * cos(orbitAngle),
+                0.0f,
+                radius * sin(orbitAngle)
+            );
+
+            rightObjectPosition = glm::vec3(
+                -radius * cos(orbitAngle),
+                0.0f,
+                -radius * sin(orbitAngle)
+            );
+
+            if (t >= 1.0f) {
+                animationState = NONE;
+                animationProgress = 0.0f;
+                leftObjectPosition = glm::vec3(3.0f, 0.0f, 0.0f);
+                rightObjectPosition = glm::vec3(-3.0f, 0.0f, 0.0f);
+            }
+
+            animationProgress += animationSpeed;
+        }
+
+            
+    }
+
+    glutPostRedisplay();
+    glutTimerFunc(16, timer, 0);
 }
 
 void keyboardCallback(unsigned char key, int x, int y) {
     switch (key) {
-    case 'x': 
-        if (leftObjectRotate || rightObjectRotate) {  
-            xOrbitActive = true;
-            xOrbitDirection = 1;
-        }
+
+    case '1':
+        animationState = SPIRAL;
+        currentPoint = 0;
         break;
-    case 'X': 
-        if (leftObjectRotate || rightObjectRotate) {
-            xOrbitActive = true;
-            xOrbitDirection = -1;
-        }
+
+    case '2':
+        animationState = THROUGH_ORIGIN;
+        animationProgress = 0.0f;
         break;
-    case 'y': 
-        if (leftObjectRotate || rightObjectRotate) {
-            yOrbitActive = true;
-            yOrbitDirection = 1;
-        }
+
+    case '3':  
+        animationState = ORBIT_EXCHANGE;
+        animationProgress = 0.0f;
         break;
-    case 'Y': 
-        if (leftObjectRotate || rightObjectRotate) {
-            yOrbitActive = true;
-            yOrbitDirection = -1;
+
+    case '4': 
+        if (animationState == NONE) {
+            animationState = UP_DOWN_EXCHANGE;
+            animationProgress = 0.0f;
         }
         break;
 
-    case '1':  
-        leftObjectRotate = true;
-        rightObjectRotate = false;
-        break;
-    case '2':  
-        leftObjectRotate = false;
-        rightObjectRotate = true;
-        break;
-    case '3': 
-        leftObjectRotate = true;
-        rightObjectRotate = true;
+    case '5':
+        if (animationState == NONE) {
+            animationState = SCALE_ROTATE_ORBIT;
+            animationProgress = 0.0f;
+        }
         break;
 
-    case 's':
-        xOrbitActive = false;  
-        yOrbitActive = false;   
-        xOrbitAngle = 0.0f;    
-        yOrbitAngle = 0.0f;    
-        rotationActive = false; 
-        rotationAngle = 0.0f;  
-        leftObjectRotate = true; 
-        rightObjectRotate = true; 
+    case '6':  // 애니메이션 중지
+        animationState = NONE;
+        animationProgress = 0.0f;
+        currentPoint = 0;
+
+        leftObjectScale = 1.0f;
+        rightObjectScale = 1.0f;
+
+        leftObjectPosition = glm::vec3(-3.0f, 0.0f, 0.0f);
+        rightObjectPosition = glm::vec3(3.0f, 0.0f, 0.0f);
+
+        showSpiral = false;
         break;
 
-    case 'r':  
-        rotationActive = true;
-        rotationDirection = 1;
+    case 'q': leftObjectPosition.x -= moveSpeed; break;
+    case 'w': leftObjectPosition.x += moveSpeed; break;
+    case 'e': leftObjectPosition.y -= moveSpeed; break;
+    case 'r': leftObjectPosition.y += moveSpeed; break;
+    case 't': leftObjectPosition.z -= moveSpeed; break;
+    case 'y': leftObjectPosition.z += moveSpeed; break;
+
+        // 오른쪽 도형 이동
+    case 'Q': rightObjectPosition.x -= moveSpeed; break;
+    case 'W': rightObjectPosition.x += moveSpeed; break;
+    case 'E': rightObjectPosition.y -= moveSpeed; break;
+    case 'R': rightObjectPosition.y += moveSpeed; break;
+    case 'T': rightObjectPosition.z -= moveSpeed; break;
+    case 'Y': rightObjectPosition.z += moveSpeed; break;
+
+
+    case 'v':
+        isScaleFromOrigin = !isScaleFromOrigin; // 모드 토글
         break;
 
-    case 'R':  
-        rotationActive = true;
-        rotationDirection = -1;
+    case 'z': // 확대
+        leftObjectScale += scaleSpeed;
         break;
+    case 'x': // 축소
+        if (leftObjectScale - scaleSpeed >= minScale) {
+            leftObjectScale -= scaleSpeed;
+        }
+        break;
+
+    case 'Z': // 확대
+        rightObjectScale += scaleSpeed;
+        break;
+    case 'X': // 축소
+        if (rightObjectScale - scaleSpeed >= minScale) {
+            rightObjectScale -= scaleSpeed;
+        }
+        break;
+
+
+    case 'a': leftObjectPosition.x -= moveSpeed; leftObjectPosition.z -= moveSpeed, rightObjectPosition.x -= moveSpeed; rightObjectPosition.z -= moveSpeed;  break;
+    case 's': leftObjectPosition.x += moveSpeed; leftObjectPosition.z += moveSpeed, rightObjectPosition.x += moveSpeed; rightObjectPosition.z += moveSpeed;  break;
 
     case 'c':
-         change = !change;
-         break;
-
+        leftObjectPosition = glm::vec3(0.0f, 0.0f, 0.0f);
+        rightObjectPosition = glm::vec3(0.0f, 0.0f, 0.0f);
+        leftObjectScale = 1.0f;
+        rightObjectScale = 1.0f;
+        break;
     }
 
     glutPostRedisplay();
-}
-
-
-void timer(int value) {
-    if (xOrbitActive) {
-        xOrbitAngle += 1.0f * xOrbitDirection;
-        if (xOrbitAngle > 360.0f) xOrbitAngle -= 360.0f;
-        if (xOrbitAngle < 0.0f) xOrbitAngle += 360.0f;
-    }
-    if (yOrbitActive) {
-        yOrbitAngle += 1.0f * yOrbitDirection;
-        if (yOrbitAngle > 360.0f) yOrbitAngle -= 360.0f;
-        if (yOrbitAngle < 0.0f) yOrbitAngle += 360.0f;
-    }
-    if (rotationActive) { 
-        rotationAngle += 1.0f * rotationDirection;
-        if (rotationAngle > 360.0f) rotationAngle -= 360.0f;
-        if (rotationAngle < 0.0f) rotationAngle += 360.0f;
-    }
-    glutPostRedisplay();
-    glutTimerFunc(16, timer, 0);
 }
 
 void drawScene() {
@@ -467,7 +609,7 @@ void drawScene() {
 
     glUseProgram(shaderProgramID);
 
-    view = glm::lookAt(glm::vec3(5.0f, 5.0f, 5.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+    view = glm::lookAt(glm::vec3(10.0f, 10.0f, 10.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
     projection = glm::perspective(glm::radians(45.0f), (float)width / (float)height, 0.1f, 100.0f);
 
     GLuint modelLoc = glGetUniformLocation(shaderProgramID, "model");
@@ -479,109 +621,46 @@ void drawScene() {
     glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, glm::value_ptr(projection));
     glUniform3f(lightPosLoc, 5.0f, 5.0f, 5.0f);
 
-    if (change) {
-
-        glBindVertexArray(vao[0]);
-        model = glm::mat4(1.0f);
-        if (rotationActive) { 
-            model = glm::rotate(model, glm::radians(rotationAngle), glm::vec3(0.0f, 1.0f, 0.0f));
-        }
-        model = glm::translate(model, glm::vec3(-3.0f, 0.0f, 0.0f));
-        if (leftObjectRotate) {
-            model = glm::translate(model, objectPosition); 
-            if (yOrbitActive) {  
-                model = glm::rotate(model, glm::radians(yOrbitAngle), glm::vec3(0.0f, 1.0f, 0.0f));
-            }
-            if (xOrbitActive) {  
-                model = glm::rotate(model, glm::radians(xOrbitAngle), glm::vec3(1.0f, 0.0f, 0.0f));
-            }
-            model = glm::translate(model, -objectPosition);  
-        }
-        model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));
-        glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-        glDrawElements(GL_TRIANGLES, cubeIndices.size(), GL_UNSIGNED_INT, 0);
-
-
-        glBindVertexArray(vao[1]);
-        model = glm::mat4(1.0f);
-        if (rotationActive) {  
-            model = glm::rotate(model, glm::radians(rotationAngle), glm::vec3(0.0f, 1.0f, 0.0f));
-        }
-        model = glm::translate(model, glm::vec3(3.0f, 0.0f, 0.0f));
-        if (rightObjectRotate) {
-            model = glm::translate(model, objectPosition);
-            if (yOrbitActive) {  
-                model = glm::rotate(model, glm::radians(yOrbitAngle), glm::vec3(0.0f, 1.0f, 0.0f));
-            }
-            if (xOrbitActive) { 
-                model = glm::rotate(model, glm::radians(xOrbitAngle), glm::vec3(1.0f, 0.0f, 0.0f));
-            }
-            model = glm::translate(model, -objectPosition); 
-        }
-        model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));
-        glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-        glDrawElements(GL_TRIANGLES, coneIndices.size(), GL_UNSIGNED_INT, 0);
+    if (showSpiral) {
+        renderSpiral();
     }
 
+    glBindVertexArray(vao[0]);
+    model = glm::mat4(1.0f);
+    if (isScaleFromOrigin) {
+        model = glm::scale(model, glm::vec3(leftObjectScale));
+        model = glm::translate(model, leftObjectPosition);
+    }
     else {
-        glBindVertexArray(vao[2]);
-        model = glm::mat4(1.0f);
-        if (rotationActive) {  
-            model = glm::rotate(model, glm::radians(rotationAngle), glm::vec3(0.0f, 1.0f, 0.0f));
-        }
-        model = glm::translate(model, glm::vec3(3.0f, 0.0f, 0.0f));
-        if (rightObjectRotate) {
-            model = glm::translate(model, objectPosition);
-            if (yOrbitActive) {  
-                model = glm::rotate(model, glm::radians(yOrbitAngle), glm::vec3(0.0f, 1.0f, 0.0f));
-            }
-            if (xOrbitActive) { 
-                model = glm::rotate(model, glm::radians(xOrbitAngle), glm::vec3(1.0f, 0.0f, 0.0f));
-            }
-            model = glm::translate(model, -objectPosition);  
-        }
-        model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));
-        glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-        glDrawElements(GL_TRIANGLES, coneIndices.size(), GL_UNSIGNED_INT, 0);
-
-
-
-        glBindVertexArray(vao[1]); 
-
-        model = glm::mat4(1.0f);
-        if (rotationActive) {
-            model = glm::rotate(model, glm::radians(rotationAngle), glm::vec3(0.0f, 1.0f, 0.0f));
-        }
-        model = glm::translate(model, glm::vec3(-3.0f, 0.0f, 0.0f));
-        if (rightObjectRotate) {
-            model = glm::translate(model, objectPosition);
-            if (yOrbitActive) {
-                model = glm::rotate(model, glm::radians(yOrbitAngle), glm::vec3(0.0f, 1.0f, 0.0f));
-            }
-            if (xOrbitActive) {
-                model = glm::rotate(model, glm::radians(xOrbitAngle), glm::vec3(1.0f, 0.0f, 0.0f));
-            }
-            model = glm::translate(model, -objectPosition);
-        }
-        model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));
-
-        glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-        glDrawElements(GL_TRIANGLES, prismIndices.size(), GL_UNSIGNED_INT, 0); 
+        model = glm::translate(model, leftObjectPosition);
+        model = glm::scale(model, glm::vec3(leftObjectScale));
     }
+    glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+    glDrawElements(GL_TRIANGLES, cubeIndices.size(), GL_UNSIGNED_INT, 0);
 
+    glBindVertexArray(vao[1]);
+    model = glm::mat4(1.0f);
+    if (isScaleFromOrigin) {
+        model = glm::scale(model, glm::vec3(rightObjectScale));
+        model = glm::translate(model, rightObjectPosition);
+    }
+    else {
+        model = glm::translate(model, rightObjectPosition);
+        model = glm::scale(model, glm::vec3(rightObjectScale));
+    }
+    glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+    glDrawElements(GL_TRIANGLES, coneIndices.size(), GL_UNSIGNED_INT, 0);
 
     glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
     model = glm::mat4(1.0f);
     glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
     glBindVertexArray(axisVAO);
     glDrawArrays(GL_LINES, 0, 6);
-
-    if (!isWireframe) {
-        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-    }
+    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
     glutSwapBuffers();
 }
+
 
 GLvoid Reshape(int w, int h) {
     width = w;
@@ -603,14 +682,12 @@ int main(int argc, char** argv) {
 
     read_obj_file("cube.obj", cubeVertexData, cubeIndices, faceColors);
     read_obj_file("cone.obj", coneVertexData, coneIndices, coneFaceColors);
-    read_obj_file("triangular_pillar.obj", prismVertexData, prismIndices, prismFaceColors);
-    read_obj_file("rect_prism.obj", rect_prismVertexData, rect_prismIndices, face2Colors);
-
-
 
     make_shaderProgram();
     InitBuffer();
     initAxes();
+    generateSpiralPoints(); 
+   
 
     glEnable(GL_DEPTH_TEST);
 
