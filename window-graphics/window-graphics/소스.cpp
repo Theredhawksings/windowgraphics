@@ -16,87 +16,40 @@
 
 GLint width, height;
 GLuint vertexShader, fragmentShader, shaderProgramID;
-GLuint vao[4];
-GLuint vbo[8];
+GLuint vao[5];
+GLuint vbo[10];
 GLint result;
 GLchar errorLog[512];
 
 GLuint axisVAO, axisVBO;
 const float axisLength = 5.0f;
 
-std::vector<GLuint> indices;
-
-bool showCube = false;
-bool showPyramid = false;
 bool isHiddenSurfaceRemoval = true;
-bool isWireframe = false;
 
 glm::mat4 model, view, projection;
 
-float xOrbitAngle = 0.0f;
-float yOrbitAngle = 0.0f;
-bool xOrbitActive = false;
-bool yOrbitActive = false;
-int xOrbitDirection = 1;
-int yOrbitDirection = 1;
-const float orbitRadius = 2.0f;
+bool change = true;
 
+std::array<std::array<glm::vec3, 4>, 6> faceColors = { {
+    {{glm::vec3(1.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f), glm::vec3(1.0f, 1.0f, 0.0f)}},
+    {{glm::vec3(0.0f, 1.0f, 1.0f), glm::vec3(1.0f, 0.0f, 1.0f), glm::vec3(0.5f, 0.5f, 0.5f), glm::vec3(0.8f, 0.2f, 0.6f)}},
+    {{glm::vec3(0.2f, 0.8f, 0.2f), glm::vec3(0.9f, 0.1f, 0.1f), glm::vec3(0.1f, 0.1f, 0.9f), glm::vec3(0.7f, 0.7f, 0.1f)}},
+    {{glm::vec3(0.5f, 0.2f, 0.8f), glm::vec3(0.3f, 0.6f, 0.4f), glm::vec3(0.8f, 0.8f, 0.2f), glm::vec3(0.1f, 0.9f, 0.7f)}},
+    {{glm::vec3(0.6f, 0.3f, 0.1f), glm::vec3(0.2f, 0.7f, 0.9f), glm::vec3(0.9f, 0.5f, 0.3f), glm::vec3(0.4f, 0.1f, 0.8f)}},
+    {{glm::vec3(0.8f, 0.1f, 0.5f), glm::vec3(0.3f, 0.9f, 0.2f), glm::vec3(0.7f, 0.4f, 0.6f), glm::vec3(0.1f, 0.5f, 0.9f)}}
+} };
 
-enum AnimationState {
-    NONE,
-    SPIRAL,
-    THROUGH_ORIGIN,
-    ORBIT_EXCHANGE,
-    UP_DOWN_EXCHANGE,
-    SCALE_ROTATE_ORBIT
-};
-
-AnimationState animationState = NONE;
-float animationProgress = 0.0f;
-const float animationSpeed = 0.02f;
-
-
-std::array<std::array<glm::vec3, 3>, 12> faceColors = { {
-
-        {glm::vec3(1.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f)},
-        {glm::vec3(1.0f, 1.0f, 0.0f), glm::vec3(0.0f, 1.0f, 1.0f), glm::vec3(1.0f, 0.0f, 1.0f)},
-
-        {glm::vec3(0.2f, 0.8f, 0.2f), glm::vec3(0.9f, 0.1f, 0.1f), glm::vec3(0.1f, 0.1f, 0.9f)},
-        {glm::vec3(0.3f, 0.6f, 0.4f), glm::vec3(0.8f, 0.8f, 0.2f), glm::vec3(0.1f, 0.9f, 0.7f)},
-
-        {glm::vec3(0.2f, 0.8f, 0.2f), glm::vec3(0.9f, 0.1f, 0.1f), glm::vec3(0.1f, 0.1f, 0.9f)},
-        {glm::vec3(0.3f, 0.6f, 0.4f), glm::vec3(0.8f, 0.8f, 0.2f), glm::vec3(0.1f, 0.9f, 0.7f)},
-
-        {glm::vec3(0.5f, 0.2f, 0.8f), glm::vec3(0.3f, 0.6f, 0.4f), glm::vec3(0.8f, 0.8f, 0.2f)},
-        {glm::vec3(0.7f, 0.4f, 0.5f), glm::vec3(0.3f, 0.9f, 0.2f), glm::vec3(0.7f, 0.4f, 0.6f)},
-
-        {glm::vec3(0.6f, 0.3f, 0.1f), glm::vec3(0.2f, 0.7f, 0.9f), glm::vec3(0.9f, 0.5f, 0.3f)},
-        {glm::vec3(0.8f, 0.1f, 0.5f), glm::vec3(0.3f, 0.9f, 0.2f), glm::vec3(0.7f, 0.4f, 0.6f)},
-
-        {glm::vec3(0.8f, 0.1f, 0.5f), glm::vec3(0.3f, 0.9f, 0.2f), glm::vec3(0.7f, 0.4f, 0.6f)},
-        {glm::vec3(0.6f, 0.3f, 0.1f), glm::vec3(0.2f, 0.7f, 0.9f), glm::vec3(0.9f, 0.5f, 0.3f)}
+std::array<std::array<glm::vec3, 3>, 6> prismFaceColors = { {
+        {{glm::vec3(1.0f, 0.0f, 0.0f), glm::vec3(0.9f, 0.0f, 0.0f), glm::vec3(0.8f, 0.0f, 0.0f)}},
+        {{glm::vec3(0.9f, 0.0f, 0.0f), glm::vec3(0.85f, 0.0f, 0.0f), glm::vec3(0.8f, 0.0f, 0.0f)}},
+        {{glm::vec3(0.6f, 0.0f, 0.0f), glm::vec3(0.1f, 1.0f, 0.0f), glm::vec3(0.4f, 0.0f, 1.0f)}},
+        {{glm::vec3(0.2f, 0.0f, 0.0f), glm::vec3(0.4f, 0.0f, 1.0f), glm::vec3(0.2f, 1.0f, 0.0f)}},
+        {{glm::vec3(0.3f, 0.0f, 0.0f), glm::vec3(0.5f, 0.0f, 1.0f), glm::vec3(0.3f, 1.0f, 0.0f)}},
+        {{glm::vec3(0.4f, 0.0f, 0.0f), glm::vec3(0.6f, 0.0f, 1.0f), glm::vec3(0.4f, 1.0f, 0.0f)}}
     } };
 
-std::array<std::array<glm::vec3, 3>, 16> coneFaceColors = { {
 
-        {{glm::vec3(0.8f, 0.2f, 0.3f), glm::vec3(0.7f, 0.3f, 0.4f), glm::vec3(0.9f, 0.1f, 0.2f)}},  
-        {{glm::vec3(0.2f, 0.8f, 0.4f), glm::vec3(0.3f, 0.7f, 0.5f), glm::vec3(0.1f, 0.9f, 0.3f)}},  
-        {{glm::vec3(0.4f, 0.3f, 0.8f), glm::vec3(0.5f, 0.2f, 0.7f), glm::vec3(0.3f, 0.4f, 0.9f)}},  
-        {{glm::vec3(0.9f, 0.8f, 0.2f), glm::vec3(0.8f, 0.9f, 0.3f), glm::vec3(0.7f, 0.7f, 0.1f)}},  
-        {{glm::vec3(0.3f, 0.9f, 0.7f), glm::vec3(0.2f, 0.8f, 0.8f), glm::vec3(0.4f, 0.7f, 0.6f)}},  
-        {{glm::vec3(0.7f, 0.4f, 0.6f), glm::vec3(0.6f, 0.5f, 0.5f), glm::vec3(0.8f, 0.3f, 0.7f)}},  
-        {{glm::vec3(0.1f, 0.5f, 0.9f), glm::vec3(0.2f, 0.4f, 0.8f), glm::vec3(0.3f, 0.6f, 0.7f)}},  
-        {{glm::vec3(0.6f, 0.8f, 0.2f), glm::vec3(0.5f, 0.9f, 0.3f), glm::vec3(0.7f, 0.7f, 0.1f)}},  
-        {{glm::vec3(0.9f, 0.3f, 0.5f), glm::vec3(0.8f, 0.4f, 0.6f), glm::vec3(0.7f, 0.2f, 0.4f)}},  
 
-        {{glm::vec3(0.4f, 0.7f, 0.3f), glm::vec3(0.3f, 0.8f, 0.2f), glm::vec3(0.5f, 0.6f, 0.4f)}},  
-        {{glm::vec3(0.2f, 0.3f, 0.8f), glm::vec3(0.3f, 0.2f, 0.9f), glm::vec3(0.1f, 0.4f, 0.7f)}},  
-        {{glm::vec3(0.8f, 0.6f, 0.1f), glm::vec3(0.9f, 0.5f, 0.2f), glm::vec3(0.7f, 0.7f, 0.3f)}},  
-        {{glm::vec3(0.5f, 0.1f, 0.6f), glm::vec3(0.4f, 0.2f, 0.5f), glm::vec3(0.6f, 0.3f, 0.7f)}},  
-        {{glm::vec3(0.3f, 0.7f, 0.8f), glm::vec3(0.2f, 0.8f, 0.7f), glm::vec3(0.4f, 0.6f, 0.9f)}},  
-        {{glm::vec3(0.7f, 0.2f, 0.2f), glm::vec3(0.8f, 0.3f, 0.1f), glm::vec3(0.6f, 0.1f, 0.3f)}},  
-        {{glm::vec3(0.1f, 0.8f, 0.5f), glm::vec3(0.2f, 0.7f, 0.6f), glm::vec3(0.3f, 0.9f, 0.4f)}},  
-    } };
 
 struct Vertex {
     glm::vec3 position;
@@ -107,45 +60,23 @@ struct Vertex {
 
 std::vector<Vertex> cubeVertexData;
 std::vector<GLuint> cubeIndices;
-std::vector<Vertex> coneVertexData; 
-std::vector<GLuint> coneIndices;    
+std::vector<Vertex> prismVertexData;
+std::vector<GLuint> prismIndices;
 
-glm::vec3 objectPosition(0.0f, 0.0f, 0.0f);
-const float moveSpeed = 0.1f;
-
-
-glm::vec3 leftObjectPosition(-3.0f, 0.0f, 0.0f);
-glm::vec3 rightObjectPosition(3.0f, 0.0f, 0.0f);
-
-
-float leftObjectScale = 1.0f;     
-float rightObjectScale = 1.0f;    
-float scaleSpeed = 0.1f;
-float minScale = 0.1f;
-bool isScaleFromOrigin = false;
-
-
-GLuint spiralVAO, spiralVBO;
-std::vector<glm::vec3> spiralPoints;  
-bool showSpiral = false;
 
 void initAxes() {
     std::vector<Vertex> cubeVertexData;
     std::vector<GLuint> cubeIndices;
-    std::vector<Vertex> tetrahedronVertexData;
-    std::vector<GLuint> tetrahedronIndices;
     std::vector<Vertex> prismVertexData;
     std::vector<GLuint> prismIndices;
-    std::vector<Vertex> rect_prismVertexData;
-    std::vector<GLuint> rect_prismIndices;
 
     float axisVertices[] = {
-        0.0f, 0.0f, 0.0f,    0.0f, 0.0f, 0.0f,         1.0f, 0.0f, 0.0f,  
-        axisLength, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,      1.0f, 0.0f, 0.0f,  
-        0.0f, 0.0f, 0.0f,    0.0f, 0.0f, 0.0f,         0.0f, 1.0f, 0.0f,  
-        0.0f, axisLength, 0.0f, 0.0f, 0.0f, 0.0f,      0.0f, 1.0f, 0.0f,  
-        0.0f, 0.0f, 0.0f,    0.0f, 0.0f, 0.0f,         0.0f, 0.0f, 1.0f, 
-        0.0f, 0.0f, axisLength, 0.0f, 0.0f, 0.0f,      0.0f, 0.0f, 1.0f   
+        0.0f, 0.0f, 0.0f,    0.0f, 0.0f, 0.0f,         1.0f, 0.0f, 0.0f,
+        axisLength, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,      1.0f, 0.0f, 0.0f,
+        0.0f, 0.0f, 0.0f,    0.0f, 0.0f, 0.0f,         0.0f, 1.0f, 0.0f,
+        0.0f, axisLength, 0.0f, 0.0f, 0.0f, 0.0f,      0.0f, 1.0f, 0.0f,
+        0.0f, 0.0f, 0.0f,    0.0f, 0.0f, 0.0f,         0.0f, 0.0f, 1.0f,
+        0.0f, 0.0f, axisLength, 0.0f, 0.0f, 0.0f,      0.0f, 0.0f, 1.0f
     };
 
     glGenVertexArrays(1, &axisVAO);
@@ -296,10 +227,9 @@ void make_shaderProgram() {
     glUseProgram(shaderProgramID);
 }
 
-
 void InitBuffer() {
-    glGenVertexArrays(4, vao);
-    glGenBuffers(8, vbo);
+    glGenVertexArrays(2, vao);
+    glGenBuffers(4, vbo);
 
     glBindVertexArray(vao[0]);
     glBindBuffer(GL_ARRAY_BUFFER, vbo[0]);
@@ -318,7 +248,7 @@ void InitBuffer() {
     glBindVertexArray(vao[1]);
     glBindBuffer(GL_ARRAY_BUFFER, vbo[2]);
 
-    glBufferData(GL_ARRAY_BUFFER, coneVertexData.size() * sizeof(Vertex), coneVertexData.data(), GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, prismVertexData.size() * sizeof(Vertex), prismVertexData.data(), GL_STATIC_DRAW);
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)0);
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, normal));
@@ -327,290 +257,301 @@ void InitBuffer() {
     glEnableVertexAttribArray(2);
 
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbo[3]);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, coneIndices.size() * sizeof(GLuint), coneIndices.data(), GL_STATIC_DRAW);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, prismIndices.size() * sizeof(GLuint), prismIndices.data(), GL_STATIC_DRAW);
 
     glBindVertexArray(0);
 }
 
+bool isRotating = false;
+float currentRotationAngle = 0.0f;
 
-bool isSpiralAnimation = false;
-float spiralAngle = 0.0f;
-float spiralRadius = 0.0f;
-const float spiralSpeed = 1.0f;       
-const float spiralGrowth = 0.05f;     
-const float maxSpiralRadius = 6.0f; 
+bool isTopRotating = false;
+float topRotationAngle = 0.0f;
 
-void generateSpiralPoints() {
-    spiralPoints.clear();
-    const float maxAngle = 1440.0f;  
-    const float angleStep = 1.0f;     
-    const float radiusGrowth = 0.005f; 
+bool isAutoFront = false;    
+float frontRotationAngle = 0.0f;
+bool frontroate = true;
 
-    for (float angle = 0.0f; angle <= maxAngle; angle += angleStep) {
-        float radius = radiusGrowth * angle;
-        float x = radius * cos(glm::radians(angle));
-        float z = radius * sin(glm::radians(angle));
-        spiralPoints.push_back(glm::vec3(x, 0.0f, z));
+bool isAutoside = false;
+float sideRotationAngle = 0.0f;
+bool sideroate = true;
+
+bool isAutoscale = false;
+float behindscale = 1.0f; 
+bool scaleroate = true;
+
+bool isAutoOpening = false;
+float openAngle1 = 0.0f;
+float openAngle2 = 0.0f;
+float openAngle3 = 0.0f;
+float openAngle4 = 0.0f;
+bool isOpening = true;
+bool iseachOpening = false;
+int currentFace = 0;
+
+bool isOrtho = true;
+
+void keyboardCallback(unsigned char key, int x, int y) {
+    switch (key) {
+
+    case 'h':
+        isHiddenSurfaceRemoval = !isHiddenSurfaceRemoval;
+        if (isHiddenSurfaceRemoval) {
+            glEnable(GL_DEPTH_TEST);
+        }
+        else {
+            glDisable(GL_DEPTH_TEST);
+        }
+        break;
+
+    case 'y':
+        isRotating = !isRotating;
+        break;
+
+    case 't':
+        isTopRotating = !isTopRotating;
+        break;
+
+    case 'f':
+        isAutoFront = !isAutoFront; 
+        break;
+
+    case 's':
+        isAutoside = !isAutoside;
+        break;
+    
+    case 'b':
+        isAutoscale = !isAutoscale;
+        break;
+
+    case 'o' :
+        isAutoOpening = !isAutoOpening;
+        break;
+
+    case 'r':
+        iseachOpening = !iseachOpening;
+        break;
+
+    case 'p': 
+        isOrtho = !isOrtho;
+        if (isOrtho) {
+            projection = glm::ortho(-2.0f, 2.0f, -2.0f, 2.0f, 0.1f, 50.0f);
+        }
+        else {
+            projection = glm::perspective(glm::radians(45.0f), (float)width / (float)height, 0.1f, 50.0f);
+        }
+        break;
+            
+    case 'c':
+        change = !change;
+        break;
+
+    case 'l':
+        isRotating = false;
+        currentRotationAngle = 0.0f;
+
+        isTopRotating = false;
+        topRotationAngle = 0.0f;
+
+        isAutoFront = false;
+        frontRotationAngle = 0.0f;
+        frontroate = true;
+
+        isAutoside = false;
+        sideRotationAngle = 0.0f;
+        sideroate = true;
+
+        isAutoscale = false;
+        behindscale = 1.0f;
+        scaleroate = true;
+
+        isAutoOpening = false;
+        openAngle1 = 0.0f;
+        openAngle2 = 0.0f;
+        openAngle3 = 0.0f;
+        openAngle4 = 0.0f;
+        isOpening = true;
+        iseachOpening = false;
+        break;
     }
 
-    glGenVertexArrays(1, &spiralVAO);
-    glGenBuffers(1, &spiralVBO);
-
-    glBindVertexArray(spiralVAO);
-    glBindBuffer(GL_ARRAY_BUFFER, spiralVBO);
-    glBufferData(GL_ARRAY_BUFFER, spiralPoints.size() * sizeof(glm::vec3), spiralPoints.data(), GL_STATIC_DRAW);
-
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
-    glEnableVertexAttribArray(0);
-
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-    glBindVertexArray(0);
-}
-
-int currentPoint = 0;
-
-void renderSpiral() {
-    glBindVertexArray(spiralVAO);
-    glLineWidth(2.0f);
-
-    glm::vec3 normal = glm::vec3(0.0f, 1.0f, 0.0f);
-    glUniform3f(glGetUniformLocation(shaderProgramID, "Normal"), normal.x, normal.y, normal.z);
-
-    glDrawArrays(GL_LINE_STRIP, 0, spiralPoints.size());
-    glBindVertexArray(0);
+    glutPostRedisplay();
 }
 
 
 
 void timer(int value) {
 
-    if (animationState != NONE) {
-        animationProgress += animationSpeed;
+    if (isRotating) {
+        currentRotationAngle += 1.0f;
+        if (currentRotationAngle >= 360.0f)
+            currentRotationAngle -= 360.0f;
+    }
 
-        if (animationState == SPIRAL) {
-            showSpiral = true;
-            currentPoint = (currentPoint + 2) % spiralPoints.size();
-            glm::vec3 spiralPos = spiralPoints[currentPoint];
-            leftObjectPosition = spiralPos;
-            rightObjectPosition = -spiralPos;
+    if (isTopRotating) {
+        topRotationAngle += 1.0f;
+        if (topRotationAngle >= 360.0f)
+            topRotationAngle -= 360.0f;
+    }
+
+    if (isAutoFront) {
+        if (frontroate) {
+            frontRotationAngle += 1.0f;
         }
 
-        else if (animationState == THROUGH_ORIGIN) {
-            float t = glm::min(animationProgress, 1.0f);
-            leftObjectPosition = glm::mix(glm::vec3(-3.0f, 0.0f, 0.0f),
-                glm::vec3(3.0f, 0.0f, 0.0f), t);
-            rightObjectPosition = glm::mix(glm::vec3(3.0f, 0.0f, 0.0f),
-                glm::vec3(-3.0f, 0.0f, 0.0f), t);
+        else if(!frontroate){
+            frontRotationAngle -= 1.0f;
+        }
 
-            if (t >= 1.0f) {
-                animationState = NONE;
-                animationProgress = 0.0f;
+        if (frontRotationAngle >= 180.0f || frontRotationAngle<=0.0f)
+            frontroate = !frontroate;
+    }
+
+    if (isAutoside) {
+        if (sideroate) {
+            sideRotationAngle += 0.1f;
+        }
+
+        else if (!sideroate) {
+            sideRotationAngle -= 0.1f;
+        }
+
+        if (sideRotationAngle >= 2.0f || sideRotationAngle <= 0.0f)
+            sideroate = !sideroate;
+    }
+
+    if (isAutoscale) {
+
+        if (scaleroate) {
+            behindscale -= 0.005f;
+        }
+
+        else if (!scaleroate) {
+            behindscale += 0.005f;
+        }
+
+        if (behindscale <= -1.0f)
+            scaleroate = false;
+
+        if (behindscale >= 1.0f)
+            scaleroate = true;
+    }
+
+    if (isAutoOpening) {
+        if (isOpening) {
+            openAngle1 += 1.0f;
+            openAngle2 += 1.0f;
+            openAngle3 += 1.0f;
+            openAngle4 += 1.0f;
+        }
+        else {
+            openAngle1 -= 1.0f;
+            openAngle2 -= 1.0f;
+            openAngle3 -= 1.0f;
+            openAngle4 -= 1.0f;
+        }
+
+        if (openAngle1 >= 235.0f || openAngle1 <= 0.0f) {
+            isOpening = !isOpening;
+        }
+    }
+
+    if (iseachOpening) {
+
+        const float ANIMATION_SPEED = 1.0f;
+        const float MAX_ANGLE = 90.0f;
+
+        if (isOpening) {
+            if (currentFace == 0) {
+                if (openAngle1 < MAX_ANGLE) {
+                    openAngle1 = std::min(openAngle1 + ANIMATION_SPEED, MAX_ANGLE);
+                }
+                else {
+                    currentFace = 1;
+                }
+            }
+            else if (currentFace == 1) {
+                if (openAngle2 < MAX_ANGLE) {
+                    openAngle2 = std::min(openAngle2 + ANIMATION_SPEED, MAX_ANGLE);
+                }
+                else {
+                    currentFace = 2;
+                }
+            }
+            else if (currentFace == 2) {
+                if (openAngle3 < MAX_ANGLE) {
+                    openAngle3 = std::min(openAngle3 + ANIMATION_SPEED, MAX_ANGLE);
+                }
+                else {
+                    currentFace = 3;
+                }
+            }
+            else if (currentFace == 3) {
+                if (openAngle4 < MAX_ANGLE) {
+                    openAngle4 = std::min(openAngle4 + ANIMATION_SPEED, MAX_ANGLE);
+                }
+                else {
+                    isOpening = false;
+                    currentFace = 0; 
+                }
+            }
+        }
+        else {  
+            if (currentFace == 0) {
+                if (openAngle1 > 0) {
+                    openAngle1 = std::max(openAngle1 - ANIMATION_SPEED, 0.0f);
+                }
+                else {
+                    currentFace = 1;
+                }
+            }
+            else if (currentFace == 1) {
+                if (openAngle2 > 0) {
+                    openAngle2 = std::max(openAngle2 - ANIMATION_SPEED, 0.0f);
+                }
+                else {
+                    currentFace = 2;
+                }
+            }
+            else if (currentFace == 2) {
+                if (openAngle3 > 0) {
+                    openAngle3 = std::max(openAngle3 - ANIMATION_SPEED, 0.0f);
+                }
+                else {
+                    currentFace = 3;
+                }
+            }
+            else if (currentFace == 3) {
+                if (openAngle4 > 0) {
+                    openAngle4 = std::max(openAngle4 - ANIMATION_SPEED, 0.0f);
+                }
+                else {
+                    isOpening = true;
+                    currentFace = 0;  
+                }
             }
         }
 
-        else if (animationState == ORBIT_EXCHANGE) {
-            float t = glm::min(animationProgress, 1.0f);
-            float angle = t * glm::pi<float>();  
-
-            float leftX = -orbitRadius * cos(angle);    
-            float leftZ = orbitRadius * sin(angle);     
-
-            float rightX = orbitRadius * cos(angle);    
-            float rightZ = -orbitRadius * sin(angle);   
-
-            leftObjectPosition = glm::vec3(leftX, 0.0f, leftZ);
-            rightObjectPosition = glm::vec3(rightX, 0.0f, rightZ);
-
-            if (t >= 1.2f) {
-                animationState = NONE;
-                animationProgress = 0.0f;
-                leftObjectPosition = glm::vec3(3.0f, 0.0f, 0.0f);
-                rightObjectPosition = glm::vec3(-3.0f, 0.0f, 0.0f);
-            }
-        }
-
-        else if (animationState == UP_DOWN_EXCHANGE) {
-
-            float t = glm::min(animationProgress, 1.0f);
-            const float maxHeight = 3.0f;  
-
-            float curve = sin(t * glm::pi<float>());
-
-            float leftX = glm::mix(-3.0f, 3.0f, t); 
-            float leftY = maxHeight * curve; 
-
-            float rightX = glm::mix(3.0f, -3.0f, t); 
-            float rightY = -maxHeight * curve; 
-
-            leftObjectPosition = glm::vec3(leftX, leftY, 0.0f);
-            rightObjectPosition = glm::vec3(rightX, rightY, 0.0f);
-
-            if (t >= 1.0f) {
-                animationState = NONE;
-                animationProgress = 0.0f;
-                leftObjectPosition = glm::vec3(3.0f, 0.0f, 0.0f);
-                rightObjectPosition = glm::vec3(-3.0f, 0.0f, 0.0f);
-            }
-        }
-
-        else if (animationState == SCALE_ROTATE_ORBIT) {
-             
-
-            animationProgress -= 0.027f;
-
-            if (animationProgress < 0.001f) {
-                animationProgress = 0.001f;
-            }
-
-            float t = glm::min(animationProgress, 1.0f);
-
-            leftObjectScale = 1.0f + t;
-            rightObjectScale = 1.0f - 0.5f * t;
-
-       
-            float rotationAngle = t * 360.0f;
-
-
-            float orbitAngle = t * glm::pi<float>() * 4.0f;  
-
-
-            float radius = 3.0f;
-            leftObjectPosition = glm::vec3(
-                radius * cos(orbitAngle),
-                0.0f,
-                radius * sin(orbitAngle)
-            );
-
-            rightObjectPosition = glm::vec3(
-                -radius * cos(orbitAngle),
-                0.0f,
-                -radius * sin(orbitAngle)
-            );
-
-            if (t >= 1.0f) {
-                animationState = NONE;
-                animationProgress = 0.0f;
-                leftObjectPosition = glm::vec3(3.0f, 0.0f, 0.0f);
-                rightObjectPosition = glm::vec3(-3.0f, 0.0f, 0.0f);
-            }
-
-            animationProgress += animationSpeed;
-        }
-
-            
     }
 
     glutPostRedisplay();
     glutTimerFunc(16, timer, 0);
 }
 
-void keyboardCallback(unsigned char key, int x, int y) {
-    switch (key) {
-
-    case '1':
-        animationState = SPIRAL;
-        currentPoint = 0;
-        break;
-
-    case '2':
-        animationState = THROUGH_ORIGIN;
-        animationProgress = 0.0f;
-        break;
-
-    case '3':  
-        animationState = ORBIT_EXCHANGE;
-        animationProgress = 0.0f;
-        break;
-
-    case '4': 
-        if (animationState == NONE) {
-            animationState = UP_DOWN_EXCHANGE;
-            animationProgress = 0.0f;
-        }
-        break;
-
-    case '5':
-        if (animationState == NONE) {
-            animationState = SCALE_ROTATE_ORBIT;
-            animationProgress = 0.0f;
-        }
-        break;
-
-    case '6':  // 애니메이션 중지
-        animationState = NONE;
-        animationProgress = 0.0f;
-        currentPoint = 0;
-
-        leftObjectScale = 1.0f;
-        rightObjectScale = 1.0f;
-
-        leftObjectPosition = glm::vec3(-3.0f, 0.0f, 0.0f);
-        rightObjectPosition = glm::vec3(3.0f, 0.0f, 0.0f);
-
-        showSpiral = false;
-        break;
-
-    case 'q': leftObjectPosition.x -= moveSpeed; break;
-    case 'w': leftObjectPosition.x += moveSpeed; break;
-    case 'e': leftObjectPosition.y -= moveSpeed; break;
-    case 'r': leftObjectPosition.y += moveSpeed; break;
-    case 't': leftObjectPosition.z -= moveSpeed; break;
-    case 'y': leftObjectPosition.z += moveSpeed; break;
-
-        // 오른쪽 도형 이동
-    case 'Q': rightObjectPosition.x -= moveSpeed; break;
-    case 'W': rightObjectPosition.x += moveSpeed; break;
-    case 'E': rightObjectPosition.y -= moveSpeed; break;
-    case 'R': rightObjectPosition.y += moveSpeed; break;
-    case 'T': rightObjectPosition.z -= moveSpeed; break;
-    case 'Y': rightObjectPosition.z += moveSpeed; break;
-
-
-    case 'v':
-        isScaleFromOrigin = !isScaleFromOrigin; // 모드 토글
-        break;
-
-    case 'z': // 확대
-        leftObjectScale += scaleSpeed;
-        break;
-    case 'x': // 축소
-        if (leftObjectScale - scaleSpeed >= minScale) {
-            leftObjectScale -= scaleSpeed;
-        }
-        break;
-
-    case 'Z': // 확대
-        rightObjectScale += scaleSpeed;
-        break;
-    case 'X': // 축소
-        if (rightObjectScale - scaleSpeed >= minScale) {
-            rightObjectScale -= scaleSpeed;
-        }
-        break;
-
-
-    case 'a': leftObjectPosition.x -= moveSpeed; leftObjectPosition.z -= moveSpeed, rightObjectPosition.x -= moveSpeed; rightObjectPosition.z -= moveSpeed;  break;
-    case 's': leftObjectPosition.x += moveSpeed; leftObjectPosition.z += moveSpeed, rightObjectPosition.x += moveSpeed; rightObjectPosition.z += moveSpeed;  break;
-
-    case 'c':
-        leftObjectPosition = glm::vec3(0.0f, 0.0f, 0.0f);
-        rightObjectPosition = glm::vec3(0.0f, 0.0f, 0.0f);
-        leftObjectScale = 1.0f;
-        rightObjectScale = 1.0f;
-        break;
-    }
-
-    glutPostRedisplay();
-}
 
 void drawScene() {
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
     glUseProgram(shaderProgramID);
 
-    view = glm::lookAt(glm::vec3(10.0f, 10.0f, 10.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-    projection = glm::perspective(glm::radians(45.0f), (float)width / (float)height, 0.1f, 100.0f);
+    if (isOrtho) {
+        projection = glm::ortho(-2.0f, 2.0f, -2.0f, 2.0f, 0.1f, 50.0f);
+    }
+    else {
+        projection = glm::perspective(glm::radians(45.0f), (float)width / (float)height, 0.1f, 50.0f);
+    }
+
+    view = glm::lookAt(glm::vec3(5.0f, 5.0f, 5.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 
     GLuint modelLoc = glGetUniformLocation(shaderProgramID, "model");
     GLuint viewLoc = glGetUniformLocation(shaderProgramID, "view");
@@ -621,35 +562,101 @@ void drawScene() {
     glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, glm::value_ptr(projection));
     glUniform3f(lightPosLoc, 5.0f, 5.0f, 5.0f);
 
-    if (showSpiral) {
-        renderSpiral();
+    if (change) {
+        model = glm::mat4(1.0f);
+        glBindVertexArray(vao[0]);
+        model = glm::rotate(model, glm::radians(currentRotationAngle), glm::vec3(0.0f, 1.0f, 0.0f));
+        glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+
+        // 뒷면
+        glm::mat4 backModel = model;
+        backModel = glm::translate(backModel, glm::vec3(0.5f, 0.5f, 0.0f));
+        backModel = glm::scale(backModel, glm::vec3(behindscale, behindscale, 1.0f));
+        backModel = glm::translate(backModel, glm::vec3(-0.5f, -0.5f, 0.0f));
+        glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(backModel));
+        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+
+
+        // 왼면
+        glm::mat4 leftModel = model;
+        leftModel = glm::translate(leftModel, glm::vec3(0.0f, sideRotationAngle, 0.0f));
+        glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(leftModel));
+        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, (void*)(6 * sizeof(GLuint)));
+
+
+        //윗면
+        glm::mat4 topModel = model;
+        topModel = glm::translate(topModel, glm::vec3(0.5f, 1.0f, 0.5f));
+        topModel = glm::rotate(topModel, glm::radians(topRotationAngle), glm::vec3(0.0f, 0.0f, 1.0f));
+        topModel = glm::translate(topModel, glm::vec3(-0.5f, -1.0f, -0.5f));
+        glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(topModel));
+        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, (void*)(12 * sizeof(GLuint)));
+
+
+        // 오른면
+        glm::mat4 rightmModel = model;
+        rightmModel = glm::translate(rightmModel, glm::vec3(0.0f, sideRotationAngle, 0.0f));
+        glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(rightmModel));
+        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, (void*)(18 * sizeof(GLuint)));
+
+        // 아랫면
+        glm::mat4 bottomModel = model;
+        glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(bottomModel));
+        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, (void*)(24 * sizeof(GLuint)));
+
+        // 앞면
+        glm::mat4 frontModel = model;
+        frontModel = glm::translate(frontModel, glm::vec3(0.5f, 0.0f, 1.0f));
+        frontModel = glm::rotate(frontModel, glm::radians(frontRotationAngle), glm::vec3(1.0f, 0.0f, 0.0f));
+        frontModel = glm::translate(frontModel, glm::vec3(-0.5f, 0.0f, -1.0f));
+        glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(frontModel));
+        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, (void*)(30 * sizeof(GLuint)));
     }
 
-    glBindVertexArray(vao[0]);
-    model = glm::mat4(1.0f);
-    if (isScaleFromOrigin) {
-        model = glm::scale(model, glm::vec3(leftObjectScale));
-        model = glm::translate(model, leftObjectPosition);
-    }
     else {
-        model = glm::translate(model, leftObjectPosition);
-        model = glm::scale(model, glm::vec3(leftObjectScale));
-    }
-    glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-    glDrawElements(GL_TRIANGLES, cubeIndices.size(), GL_UNSIGNED_INT, 0);
+        glBindVertexArray(vao[1]);
+        glm::mat4 baseModel = glm::mat4(1.0f);
+        baseModel = glm::rotate(baseModel, glm::radians(currentRotationAngle), glm::vec3(0.0f, 1.0f, 0.0f));
+        baseModel = glm::translate(baseModel, glm::vec3(0.0f, 0.0f, 2.0f));
+        baseModel = glm::rotate(baseModel, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+        baseModel = glm::scale(baseModel, glm::vec3(2.0f, 2.0f, 2.0f));
 
-    glBindVertexArray(vao[1]);
-    model = glm::mat4(1.0f);
-    if (isScaleFromOrigin) {
-        model = glm::scale(model, glm::vec3(rightObjectScale));
-        model = glm::translate(model, rightObjectPosition);
+        // 바닥면 (고정)
+        glm::mat4 bottomModel = baseModel;
+        glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(bottomModel));
+        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+
+        glm::mat4 frontModel = baseModel;
+        frontModel = glm::translate(frontModel, glm::vec3(0.5f, 0.0f, 0.0f));
+        frontModel = glm::rotate(frontModel, glm::radians(openAngle1), glm::vec3(1.0f, 0.0f, 0.0f));
+        frontModel = glm::translate(frontModel, glm::vec3(-0.5f, 0.0f, 0.0f));
+        glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(frontModel));
+        glDrawElements(GL_TRIANGLES, 3, GL_UNSIGNED_INT, (void*)(6 * sizeof(GLuint)));
+
+        glm::mat4 rightModel = baseModel;
+        rightModel = glm::translate(rightModel, glm::vec3(1.0f, 0.0f, 0.0f));  // 아래쪽 모서리로 이동
+        rightModel = glm::rotate(rightModel, glm::radians(openAngle2), glm::vec3(0.0f, 1.0f, 0.0f));  // X축 기준으로 회전
+        rightModel = glm::translate(rightModel, glm::vec3(-1.0f, 0.0f, 0.0f));  // 원래 위치로
+        glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(rightModel));
+        glDrawElements(GL_TRIANGLES, 3, GL_UNSIGNED_INT, (void*)(9 * sizeof(GLuint)));
+
+        glm::mat4 backModel = baseModel;
+        backModel = glm::translate(backModel, glm::vec3(0.5f, 1.0f, 0.0f));  // 아래쪽 모서리로 이동
+        backModel = glm::rotate(backModel, glm::radians(openAngle3), glm::vec3(-1.0f, 0.0f, 0.0f));  // -Y축 기준으로 회전
+        backModel = glm::translate(backModel, glm::vec3(-0.5f, -1.0f, 0.0f));  // 원래 위치로
+        glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(backModel));
+        glDrawElements(GL_TRIANGLES, 3, GL_UNSIGNED_INT, (void*)(12 * sizeof(GLuint)));
+
+
+        glm::mat4 leftModel = baseModel;
+        leftModel = glm::translate(leftModel, glm::vec3(0.0f, 0.5f, 0.0f));
+        leftModel = glm::rotate(leftModel, glm::radians(openAngle4), glm::vec3(0.0f, -1.0f, 0.0f));
+        leftModel = glm::translate(leftModel, glm::vec3(0.0f, -0.5f, 0.0f));
+        glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(leftModel));
+        glDrawElements(GL_TRIANGLES, 3, GL_UNSIGNED_INT, (void*)(15 * sizeof(GLuint)));
+
     }
-    else {
-        model = glm::translate(model, rightObjectPosition);
-        model = glm::scale(model, glm::vec3(rightObjectScale));
-    }
-    glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-    glDrawElements(GL_TRIANGLES, coneIndices.size(), GL_UNSIGNED_INT, 0);
+
 
     glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
     model = glm::mat4(1.0f);
@@ -660,7 +667,6 @@ void drawScene() {
 
     glutSwapBuffers();
 }
-
 
 GLvoid Reshape(int w, int h) {
     width = w;
@@ -681,19 +687,19 @@ int main(int argc, char** argv) {
     }
 
     read_obj_file("cube.obj", cubeVertexData, cubeIndices, faceColors);
-    read_obj_file("cone.obj", coneVertexData, coneIndices, coneFaceColors);
+    read_obj_file("pyramid.obj", prismVertexData, prismIndices, prismFaceColors);
+
+
 
     make_shaderProgram();
     InitBuffer();
     initAxes();
-    generateSpiralPoints(); 
-   
 
     glEnable(GL_DEPTH_TEST);
 
     glutDisplayFunc(drawScene);
     glutReshapeFunc(Reshape);
-    glutKeyboardFunc(keyboardCallback); 
+    glutKeyboardFunc(keyboardCallback);
     glutTimerFunc(0, timer, 0);
 
     glutMainLoop();
