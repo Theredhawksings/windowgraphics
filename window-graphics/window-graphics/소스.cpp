@@ -11,20 +11,19 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
-#include <random>
-#include <algorithm>
 
-glm::mat4 view, projection;  
-GLint width = 1024, height = 768;
+GLint width, height;
 GLuint vertexShader, fragmentShader, shaderProgramID;
-GLuint vao[8];
-GLuint vbo[16];
+GLuint vao[7];
+GLuint vbo[14];
 GLint result;
 GLchar errorLog[512];
+
 
 GLuint axisVAO, axisVBO;
 const float axisLength = 5.0f;
 
+glm::mat4 model, view, projection;
 
 struct Vertex {
     glm::vec3 position;
@@ -33,16 +32,81 @@ struct Vertex {
     int faceIndex;
 };
 
+std::vector<Vertex> cube1VertexData;
+std::vector<GLuint> cube1Indices;
+std::vector<Vertex> cube2VertexData;
+std::vector<GLuint> cube2Indices;
+std::vector<Vertex> cube3VertexData;
+std::vector<GLuint> cube3Indices;
+std::vector<Vertex> cube4VertexData;
+std::vector<GLuint> cube4Indices;
+std::vector<Vertex> cube5VertexData;
+std::vector<GLuint> cube5Indices;
+std::vector<Vertex> cube6VertexData;
+std::vector<GLuint> cube6Indices;
+
+std::array<std::array<glm::vec3, 4>, 6> face1Colors = { {
+    {{glm::vec3(1.0f, 0.0f, 0.0f), glm::vec3(1.0f, 0.0f, 0.0f), glm::vec3(1.0f, 0.0f, 0.0f), glm::vec3(1.0f, 0.0f, 0.0f)}},
+    {{glm::vec3(1.0f, 0.0f, 0.0f), glm::vec3(1.0f, 0.0f, 0.0f), glm::vec3(1.0f, 0.0f, 0.0f), glm::vec3(1.0f, 0.0f, 0.0f)}},
+    {{glm::vec3(1.0f, 0.0f, 0.0f), glm::vec3(1.0f, 0.0f, 0.0f), glm::vec3(1.0f, 0.0f, 0.0f), glm::vec3(1.0f, 0.0f, 0.0f)}},
+    {{glm::vec3(1.0f, 0.0f, 0.0f), glm::vec3(1.0f, 0.0f, 0.0f), glm::vec3(1.0f, 0.0f, 0.0f), glm::vec3(1.0f, 0.0f, 0.0f)}},
+    {{glm::vec3(1.0f, 0.0f, 0.0f), glm::vec3(1.0f, 0.0f, 0.0f), glm::vec3(1.0f, 0.0f, 0.0f), glm::vec3(1.0f, 0.0f, 0.0f)}},
+    {{glm::vec3(1.0f, 0.0f, 0.0f), glm::vec3(1.0f, 0.0f, 0.0f), glm::vec3(1.0f, 0.0f, 0.0f), glm::vec3(1.0f, 0.0f, 0.0f)}}
+} };
+
+std::array<std::array<glm::vec3, 4>, 6> face2Colors = { {
+    {{glm::vec3(1.0f, 1.0f, 0.0f), glm::vec3(1.0f, 1.0f, 0.0f), glm::vec3(1.0f, 1.0f, 0.0f), glm::vec3(1.0f, 1.0f, 0.0f)}},
+    {{glm::vec3(1.0f, 1.0f, 0.0f), glm::vec3(1.0f, 1.0f, 0.0f), glm::vec3(1.0f, 1.0f, 0.0f), glm::vec3(1.0f, 1.0f, 0.0f)}},
+    {{glm::vec3(1.0f, 1.0f, 0.0f), glm::vec3(1.0f, 1.0f, 0.0f), glm::vec3(1.0f, 1.0f, 0.0f), glm::vec3(1.0f, 1.0f, 0.0f)}},
+    {{glm::vec3(1.0f, 1.0f, 0.0f), glm::vec3(1.0f, 1.0f, 0.0f), glm::vec3(1.0f, 1.0f, 0.0f), glm::vec3(1.0f, 1.0f, 0.0f)}},
+    {{glm::vec3(1.0f, 1.0f, 0.0f), glm::vec3(1.0f, 1.0f, 0.0f), glm::vec3(1.0f, 1.0f, 0.0f), glm::vec3(1.0f, 1.0f, 0.0f)}},
+    {{glm::vec3(1.0f, 1.0f, 0.0f), glm::vec3(1.0f, 1.0f, 0.0f), glm::vec3(1.0f, 1.0f, 0.0f), glm::vec3(1.0f, 1.0f, 0.0f)}}
+} };
+
+std::array<std::array<glm::vec3, 4>, 6> face3Colors = { {
+    {{glm::vec3(1.0f, 0.7f, 1.0f), glm::vec3(1.0f, 0.7f, 1.0f), glm::vec3(1.0f, 0.7f, 1.0f), glm::vec3(1.0f, 0.7f, 1.0f)}},
+    {{glm::vec3(1.0f, 0.7f, 1.0f), glm::vec3(1.0f, 0.7f, 1.0f), glm::vec3(1.0f, 0.7f, 1.0f), glm::vec3(1.0f, 0.7f, 1.0f)}},
+    {{glm::vec3(1.0f, 0.7f, 1.0f), glm::vec3(1.0f, 0.7f, 1.0f), glm::vec3(1.0f, 0.7f, 1.0f), glm::vec3(1.0f, 0.7f, 1.0f)}},
+    {{glm::vec3(1.0f, 0.7f, 1.0f), glm::vec3(1.0f, 0.7f, 1.0f), glm::vec3(1.0f, 0.7f, 1.0f), glm::vec3(1.0f, 0.7f, 1.0f)}},
+    {{glm::vec3(1.0f, 0.7f, 1.0f), glm::vec3(1.0f, 0.7f, 1.0f), glm::vec3(1.0f, 0.7f, 1.0f), glm::vec3(1.0f, 0.7f, 1.0f)}},
+    {{glm::vec3(1.0f, 0.7f, 1.0f), glm::vec3(1.0f, 0.7f, 1.0f), glm::vec3(1.0f, 0.7f, 1.0f), glm::vec3(1.0f, 0.7f, 1.0f)}}
+} };
+
+std::array<std::array<glm::vec3, 4>, 6> face4Colors = { {
+    {{glm::vec3(1.0f, 0.5f, 1.0f), glm::vec3(1.0f, 0.5f, 1.0f), glm::vec3(1.0f, 0.5f, 1.0f), glm::vec3(1.0f, 0.5f, 1.0f)}},
+    {{glm::vec3(1.0f, 0.5f, 1.0f), glm::vec3(1.0f, 0.5f, 1.0f), glm::vec3(1.0f, 0.5f, 1.0f), glm::vec3(1.0f, 0.5f, 1.0f)}},
+    {{glm::vec3(1.0f, 0.5f, 1.0f), glm::vec3(1.0f, 0.5f, 1.0f), glm::vec3(1.0f, 0.5f, 1.0f), glm::vec3(1.0f, 0.5f, 1.0f)}},
+    {{glm::vec3(1.0f, 0.5f, 1.0f), glm::vec3(1.0f, 0.5f, 1.0f), glm::vec3(1.0f, 0.5f, 1.0f), glm::vec3(1.0f, 0.5f, 1.0f)}},
+    {{glm::vec3(1.0f, 0.5f, 1.0f), glm::vec3(1.0f, 0.5f, 1.0f), glm::vec3(1.0f, 0.5f, 1.0f), glm::vec3(1.0f, 0.5f, 1.0f)}},
+    {{glm::vec3(1.0f, 0.5f, 1.0f), glm::vec3(1.0f, 0.5f, 1.0f), glm::vec3(1.0f, 0.5f, 1.0f), glm::vec3(1.0f, 0.5f, 1.0f)}}
+} };
+
+std::array<std::array<glm::vec3, 4>, 6> face5Colors = { {
+    {{glm::vec3(0.0f, 0.5f, 0.8f), glm::vec3(0.0f, 0.5f, 0.8f), glm::vec3(0.0f, 0.5f, 0.8f), glm::vec3(0.0f, 0.5f, 0.8f)}},
+    {{glm::vec3(0.0f, 0.5f, 0.8f), glm::vec3(0.0f, 0.5f, 0.8f), glm::vec3(0.0f, 0.5f, 0.8f), glm::vec3(0.0f, 0.5f, 0.8f)}},
+    {{glm::vec3(0.0f, 0.5f, 0.8f), glm::vec3(0.0f, 0.5f, 0.8f), glm::vec3(0.0f, 0.5f, 0.8f), glm::vec3(0.0f, 0.5f, 0.8f)}},
+    {{glm::vec3(0.0f, 0.5f, 0.8f), glm::vec3(0.0f, 0.5f, 0.8f), glm::vec3(0.0f, 0.5f, 0.8f), glm::vec3(0.0f, 0.5f, 0.8f)}},
+    {{glm::vec3(0.0f, 0.5f, 0.8f), glm::vec3(0.0f, 0.5f, 0.8f), glm::vec3(0.0f, 0.5f, 0.8f), glm::vec3(0.0f, 0.5f, 0.8f)}},
+    {{glm::vec3(0.0f, 0.5f, 0.8f), glm::vec3(0.0f, 0.5f, 0.8f), glm::vec3(0.0f, 0.5f, 0.8f), glm::vec3(0.0f, 0.5f, 0.8f)}}
+} };
+
+std::array<std::array<glm::vec3, 4>, 6> face6Colors = { {
+    {{glm::vec3(0.2f, 0.0f, 0.8f), glm::vec3(0.2f, 0.0f, 0.8f), glm::vec3(0.2f, 0.0f, 0.8f), glm::vec3(0.2f, 0.0f, 0.8f)}},
+    {{glm::vec3(0.2f, 0.0f, 0.8f), glm::vec3(0.2f, 0.0f, 0.8f), glm::vec3(0.2f, 0.0f, 0.8f), glm::vec3(0.2f, 0.0f, 0.8f)}},
+    {{glm::vec3(0.2f, 0.0f, 0.8f), glm::vec3(0.2f, 0.0f, 0.8f), glm::vec3(0.2f, 0.0f, 0.8f), glm::vec3(0.2f, 0.0f, 0.8f)}},
+    {{glm::vec3(0.2f, 0.0f, 0.8f), glm::vec3(0.2f, 0.0f, 0.8f), glm::vec3(0.2f, 0.0f, 0.8f), glm::vec3(0.2f, 0.0f, 0.8f)}},
+    {{glm::vec3(0.2f, 0.0f, 0.8f), glm::vec3(0.2f, 0.0f, 0.8f), glm::vec3(0.2f, 0.0f, 0.8f), glm::vec3(0.2f, 0.0f, 0.8f)}},
+    {{glm::vec3(0.2f, 0.0f, 0.8f), glm::vec3(0.2f, 0.0f, 0.8f), glm::vec3(0.2f, 0.0f, 0.8f), glm::vec3(0.2f, 0.0f, 0.8f)}}
+} };
+
 void initAxes() {
     float axisVertices[] = {
-        -axisLength, 0.0f, 0.0f,    0.0f, 0.0f, 0.0f,    1.0f, 0.0f, 0.0f,
-        axisLength, 0.0f, 0.0f,     0.0f, 0.0f, 0.0f,    1.0f, 0.0f, 0.0f,
-
-        0.0f, -axisLength, 0.0f,    0.0f, 0.0f, 0.0f,    0.0f, 1.0f, 0.0f,
-        0.0f, axisLength, 0.0f,     0.0f, 0.0f, 0.0f,    0.0f, 1.0f, 0.0f,
-
-        0.0f, 0.0f, -axisLength,    0.0f, 0.0f, 0.0f,    0.0f, 0.0f, 1.0f,
-        0.0f, 0.0f, axisLength,     0.0f, 0.0f, 0.0f,    0.0f, 0.0f, 1.0f
+        0.0f, 0.0f, 0.0f,    0.0f, 0.0f, 0.0f,         1.0f, 0.0f, 0.0f,  // x축 (빨간색)
+        axisLength, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,      1.0f, 0.0f, 0.0f,
+        0.0f, 0.0f, 0.0f,    0.0f, 0.0f, 0.0f,         0.0f, 1.0f, 0.0f,  // y축 (초록색)
+        0.0f, axisLength, 0.0f, 0.0f, 0.0f, 0.0f,      0.0f, 1.0f, 0.0f,
+        0.0f, 0.0f, 0.0f,    0.0f, 0.0f, 0.0f,         0.0f, 0.0f, 1.0f,  // z축 (파란색)
+        0.0f, 0.0f, axisLength, 0.0f, 0.0f, 0.0f,      0.0f, 0.0f, 1.0f
     };
 
     glGenVertexArrays(1, &axisVAO);
@@ -65,225 +129,18 @@ void initAxes() {
     glBindVertexArray(0);
 }
 
-
-std::array<std::array<glm::vec3, 3>, 958> sphereColors;
-
-
-void initSphereColors() {
-    for (auto& face : sphereColors) {
-        for (auto& color : face) {
-            color = glm::vec3(0.0f, 0.0f, 1.0f);  // 파란색
-        }
-    }
-}
-
-std::vector<Vertex> sphereVertexData;
-std::vector<GLuint> sphereIndices;
-
-
-
-std::vector<Vertex> planet1VertexData;
-std::vector<GLuint> planet1Indices;
-std::vector<Vertex> planet2VertexData;
-std::vector<GLuint> planet2Indices;
-std::vector<Vertex> planet3VertexData;
-std::vector<GLuint> planet3Indices;
-
-std::array<std::array<glm::vec3, 3>, 958> planetColors;
-
-void initPlanetColors() {
-    for (auto& face : planetColors) {
-        for (auto& color : face) {
-            color = glm::vec3(0.0f, 1.0f, 0.0f);
-        }
-    }
-}
-
-std::vector<Vertex> moon1VertexData;
-std::vector<GLuint> moon1Indices;
-std::vector<Vertex> moon2VertexData;
-std::vector<GLuint> moon2Indices;
-std::vector<Vertex> moon3VertexData;
-std::vector<GLuint> moon3Indices;
-std::array<std::array<glm::vec3, 3>, 958> moonColors;
-
-float moonRotationAngle1 = 0.0f;
-float moonRotationAngle2 = 0.0f;
-float moonRotationAngle3 = 0.0f;
-
-void initMoonColors() {
-    for (auto& face : moonColors) {
-        for (auto& color : face) {
-            color = glm::vec3(1.0f, 0.0f, 0.0f);  
-        }
-    }
-}
-
-float rotationAngle1 = 0.0f;
-float rotationAngle2 = 0.0f;
-float rotationAngle3 = 0.0f;
-
-
-// 궤도 경로를 위한 전역 변수
-GLuint orbitVAO[6];
-GLuint orbitVBO[6];
-
-void initOrbitPath() {
-    const int numSegments = 100;
-    const float planetRadius = 2.5f;  // 행성의 공전 거리
-    const float moonRadius = 0.5f;    // 달의 공전 거리
-    std::vector<float> planetOrbitVertices;
-    std::vector<float> moonOrbitVertices;
-
-    // 행성 궤도와 달 궤도 모두 같은 방향(시계 방향)으로 정점 생성
-    for (int i = 0; i <= numSegments; i++) {
-        float angle = 2.0f * glm::pi<float>() * float(i) / float(numSegments);
-
-        // 행성 궤도 정점
-        float x = planetRadius * cos(angle);
-        float z = planetRadius * sin(angle);
-        planetOrbitVertices.push_back(x);
-        planetOrbitVertices.push_back(0.0f);
-        planetOrbitVertices.push_back(z);
-
-        // 달 궤도 정점 (행성과 같은 방향)
-        x = moonRadius * cos(angle);
-        z = moonRadius * sin(angle);
-        moonOrbitVertices.push_back(x);
-        moonOrbitVertices.push_back(0.0f);
-        moonOrbitVertices.push_back(z);
-    }
-
-    // VAO와 VBO 생성
-    glGenVertexArrays(6, orbitVAO);
-    glGenBuffers(6, orbitVBO);
-
-    // 행성 궤도 버퍼 설정 (0, 1, 2번 인덱스)
-    for (int i = 0; i < 3; i++) {
-        glBindVertexArray(orbitVAO[i]);
-        glBindBuffer(GL_ARRAY_BUFFER, orbitVBO[i]);
-        glBufferData(GL_ARRAY_BUFFER, planetOrbitVertices.size() * sizeof(float), planetOrbitVertices.data(), GL_STATIC_DRAW);
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
-        glEnableVertexAttribArray(0);
-    }
-
-    // 달 궤도 버퍼 설정 (3, 4, 5번 인덱스)
-    for (int i = 3; i < 6; i++) {
-        glBindVertexArray(orbitVAO[i]);
-        glBindBuffer(GL_ARRAY_BUFFER, orbitVBO[i]);
-        glBufferData(GL_ARRAY_BUFFER, moonOrbitVertices.size() * sizeof(float), moonOrbitVertices.data(), GL_STATIC_DRAW);
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
-        glEnableVertexAttribArray(0);
-    }
-}
-
-float sceneRotationY = 0.0f;
-bool isRotatingPositive = false;
-bool isRotatingNegative = false;
-
-float sceneRotationZ = 0.0f;
-bool isRotatingZPositive = false;
-bool isRotatingZNegative = false;
-
-void drawOrbitPaths() {
-    glm::mat4 model;
-    GLuint modelLoc = glGetUniformLocation(shaderProgramID, "model");
-    GLuint objectColorLoc = glGetUniformLocation(shaderProgramID, "objectColor");
-
-    // 라인 두께 설정
-    glLineWidth(1.0f);
-
-    // 행성 궤도 그리기 (흰색)
-    glUniform3f(objectColorLoc, 1.0f, 1.0f, 1.0f);
-
-    // 행성들의 궤도 그리기
-    model = glm::mat4(1.0f);
-    glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-    model = glm::rotate(model, glm::radians(sceneRotationY), glm::vec3(0.0f, 1.0f, 0.0f));  // Y축 전체 회전
-    model = glm::rotate(model, glm::radians(sceneRotationZ), glm::vec3(0.0f, 0.0f, 1.0f));  // Z축 전체 회전
-
-    glBindVertexArray(orbitVAO[0]);
-    glDrawArrays(GL_LINE_STRIP, 0, 101);
-
-    model = glm::mat4(1.0f);
-    model = glm::rotate(model, glm::radians(45.0f), glm::vec3(1.0f, 0.0f, 0.0f));
-    model = glm::rotate(model, glm::radians(sceneRotationY), glm::vec3(0.0f, 1.0f, 0.0f));  // Y축 전체 회전
-    model = glm::rotate(model, glm::radians(sceneRotationZ), glm::vec3(0.0f, 0.0f, 1.0f));  // Z축 전체 회전
-
-    glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-    glBindVertexArray(orbitVAO[1]);
-    glDrawArrays(GL_LINE_STRIP, 0, 101);
-
-    model = glm::mat4(1.0f);
-    model = glm::rotate(model, glm::radians(-45.0f), glm::vec3(1.0f, 0.0f, 0.0f));
-    model = glm::rotate(model, glm::radians(sceneRotationY), glm::vec3(0.0f, 1.0f, 0.0f));  // Y축 전체 회전
-    model = glm::rotate(model, glm::radians(sceneRotationZ), glm::vec3(0.0f, 0.0f, 1.0f));  // Z축 전체 회전
-
-    glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-    glBindVertexArray(orbitVAO[2]);
-    glDrawArrays(GL_LINE_STRIP, 0, 101);
-
-    // 달 궤도 그리기 (빨간색)
-    glUniform3f(objectColorLoc, 1.0f, 0.0f, 0.0f);
-    float planetOrbitRadius = 2.5f;
-
-    float planet1X = planetOrbitRadius * cos(glm::radians(-rotationAngle1));
-    float planet1Y = 0.0f;
-    float planet1Z = planetOrbitRadius * sin(glm::radians(-rotationAngle1));
-
-    float planet2X = planetOrbitRadius * cos(glm::radians(-rotationAngle2));
-    float planet2Y = planetOrbitRadius * sin(glm::radians(45.0f)) * sin(glm::radians(rotationAngle2));
-    float planet2Z = planetOrbitRadius * sin(glm::radians(-rotationAngle2)) * cos(glm::radians(45.0f));
-
-    float planet3X = planetOrbitRadius * cos(glm::radians(-rotationAngle3));
-    float planet3Y = planetOrbitRadius * sin(glm::radians(-45.0f)) * sin(glm::radians(rotationAngle3));
-    float planet3Z = planetOrbitRadius * sin(glm::radians(-rotationAngle3)) * cos(glm::radians(-45.0f));
-
-    model = glm::mat4(1.0f);
-    model = glm::translate(model, glm::vec3(planet1X, planet1Y, planet1Z));
-    model = glm::rotate(model, glm::radians(0.0f), glm::vec3(0.0f, 1.0f, 0.0f));  // Y축으로 180도 회전
-
-    model = glm::rotate(model, glm::radians(sceneRotationY), glm::vec3(0.0f, 1.0f, 0.0f));  // Y축 전체 회전
-    model = glm::rotate(model, glm::radians(sceneRotationZ), glm::vec3(0.0f, 0.0f, 1.0f));  // Z축 전체 회전
-
-    glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-    glBindVertexArray(orbitVAO[3]);
-    glDrawArrays(GL_LINE_STRIP, 0, 101);
-
-    model = glm::mat4(1.0f);
-    model = glm::translate(model, glm::vec3(planet2X, planet2Y, planet2Z));
-    model = glm::rotate(model, glm::radians(0.0f), glm::vec3(0.0f, 1.0f, 0.0f));  // Y축으로 180도 회전
-
-    
-    model = glm::rotate(model, glm::radians(sceneRotationY), glm::vec3(0.0f, 1.0f, 0.0f));  // Y축 전체 회전
-    model = glm::rotate(model, glm::radians(sceneRotationZ), glm::vec3(0.0f, 0.0f, 1.0f));  // Z축 전체 회전
-    glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-    glBindVertexArray(orbitVAO[4]);
-    glDrawArrays(GL_LINE_STRIP, 0, 101);
-
-    model = glm::mat4(1.0f);
-    model = glm::translate(model, glm::vec3(planet3X, planet3Y, planet3Z));
-    model = glm::rotate(model, glm::radians(0.0f), glm::vec3(0.0f, 1.0f, 0.0f));  // Y축으로 180도 회전
-
-    model = glm::rotate(model, glm::radians(sceneRotationY), glm::vec3(0.0f, 1.0f, 0.0f));  // 4. Y축 전체 회전
-    model = glm::rotate(model, glm::radians(sceneRotationZ), glm::vec3(0.0f, 0.0f, 1.0f));  // Z축 전체 회전 추가
-
-    glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-    glBindVertexArray(orbitVAO[5]);
-    glDrawArrays(GL_LINE_STRIP, 0, 101);
-
-}
-
-
 template<size_t N, size_t M>
+
 void read_obj_file(const char* filename, std::vector<Vertex>& vertexData, std::vector<GLuint>& indices, const std::array<std::array<glm::vec3, M>, N>& colors) {
     std::ifstream file(filename);
     if (!file.is_open()) {
         std::cerr << "Error opening file: " << filename << std::endl;
         exit(EXIT_FAILURE);
     }
+
     std::vector<glm::vec3> temp_vertices;
     std::vector<glm::vec3> temp_normals;
+
     std::string line;
     int faceIndex = 0;
 
@@ -302,27 +159,7 @@ void read_obj_file(const char* filename, std::vector<Vertex>& vertexData, std::v
             iss >> normal.x >> normal.y >> normal.z;
             temp_normals.push_back(normal);
         }
-    }
-
-    glm::vec3 center(0.0f);
-    for (const auto& v : temp_vertices) {
-        center += v;
-    }
-    center /= temp_vertices.size();
-
-    for (auto& v : temp_vertices) {
-        v -= center;
-    }
-
-    file.clear();
-    file.seekg(0);
-
-    while (std::getline(file, line)) {
-        std::istringstream iss(line);
-        std::string type;
-        iss >> type;
-
-        if (type == "f") {
+        else if (type == "f") {
             std::string v1, v2, v3;
             iss >> v1 >> v2 >> v3;
 
@@ -354,10 +191,100 @@ void read_obj_file(const char* filename, std::vector<Vertex>& vertexData, std::v
             indices.push_back(process_vertex(v1, 0));
             indices.push_back(process_vertex(v2, 1));
             indices.push_back(process_vertex(v3, 2));
+
             faceIndex++;
         }
     }
     file.close();
+}
+
+void InitBuffer() {
+    glGenVertexArrays(6, vao);
+    glGenBuffers(12, vbo);
+
+    glBindVertexArray(vao[0]);
+    glBindBuffer(GL_ARRAY_BUFFER, vbo[0]);
+    glBufferData(GL_ARRAY_BUFFER, cube1VertexData.size() * sizeof(Vertex), cube1VertexData.data(), GL_STATIC_DRAW);
+
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)0);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, normal));
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, color));
+    glEnableVertexAttribArray(2);
+
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbo[1]);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, cube1Indices.size() * sizeof(GLuint), cube1Indices.data(), GL_STATIC_DRAW);
+
+    glBindVertexArray(vao[1]);
+    glBindBuffer(GL_ARRAY_BUFFER, vbo[2]);
+    glBufferData(GL_ARRAY_BUFFER, cube2VertexData.size() * sizeof(Vertex), cube2VertexData.data(), GL_STATIC_DRAW);
+
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)0);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, normal));
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, color));
+    glEnableVertexAttribArray(2);
+
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbo[3]);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, cube2Indices.size() * sizeof(GLuint), cube2Indices.data(), GL_STATIC_DRAW);
+
+    glBindVertexArray(vao[2]);
+    glBindBuffer(GL_ARRAY_BUFFER, vbo[4]);
+    glBufferData(GL_ARRAY_BUFFER, cube3VertexData.size() * sizeof(Vertex), cube3VertexData.data(), GL_STATIC_DRAW);
+
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)0);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, normal));
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, color));
+    glEnableVertexAttribArray(2);
+
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbo[5]);  
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, cube3Indices.size() * sizeof(GLuint), cube3Indices.data(), GL_STATIC_DRAW);
+
+    glBindVertexArray(vao[3]);
+    glBindBuffer(GL_ARRAY_BUFFER, vbo[6]); 
+    glBufferData(GL_ARRAY_BUFFER, cube4VertexData.size() * sizeof(Vertex), cube4VertexData.data(), GL_STATIC_DRAW);
+
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)0);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, normal));
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, color));
+    glEnableVertexAttribArray(2);
+
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbo[7]);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, cube4Indices.size() * sizeof(GLuint), cube4Indices.data(), GL_STATIC_DRAW);
+
+    glBindVertexArray(vao[4]);
+    glBindBuffer(GL_ARRAY_BUFFER, vbo[8]);
+    glBufferData(GL_ARRAY_BUFFER, cube5VertexData.size() * sizeof(Vertex), cube5VertexData.data(), GL_STATIC_DRAW);
+
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)0);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, normal));
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, color));
+    glEnableVertexAttribArray(2);
+
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbo[9]);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, cube5Indices.size() * sizeof(GLuint), cube5Indices.data(), GL_STATIC_DRAW);
+
+    glBindVertexArray(vao[5]);
+    glBindBuffer(GL_ARRAY_BUFFER, vbo[10]);
+    glBufferData(GL_ARRAY_BUFFER, cube6VertexData.size() * sizeof(Vertex), cube6VertexData.data(), GL_STATIC_DRAW);
+
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)0);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, normal));
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, color));
+    glEnableVertexAttribArray(2);
+
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbo[11]);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, cube6Indices.size() * sizeof(GLuint), cube6Indices.data(), GL_STATIC_DRAW);
 }
 
 char* filetobuf(const char* file) {
@@ -383,7 +310,6 @@ void make_vertexShaders() {
     glShaderSource(vertexShader, 1, (const GLchar**)&vertexSource, 0);
     glCompileShader(vertexShader);
     glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &result);
-
     if (!result) {
         glGetShaderInfoLog(vertexShader, 512, NULL, errorLog);
         std::cerr << "ERROR: Vertex shader compilation failed\n" << errorLog << std::endl;
@@ -397,7 +323,6 @@ void make_fragmentShaders() {
     glShaderSource(fragmentShader, 1, (const GLchar**)&fragmentSource, 0);
     glCompileShader(fragmentShader);
     glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &result);
-
     if (!result) {
         glGetShaderInfoLog(fragmentShader, 512, NULL, errorLog);
         std::cerr << "ERROR: Fragment shader compilation failed\n" << errorLog << std::endl;
@@ -419,308 +344,342 @@ void make_shaderProgram() {
     glUseProgram(shaderProgramID);
 }
 
-void InitBuffer() {
-    glGenVertexArrays(8, vao);
-    glGenBuffers(16, vbo);
-
-    glBindVertexArray(vao[0]);
-    glBindBuffer(GL_ARRAY_BUFFER, vbo[0]);
-    glBufferData(GL_ARRAY_BUFFER, sphereVertexData.size() * sizeof(Vertex), sphereVertexData.data(), GL_STATIC_DRAW);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)0);
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, normal));
-    glEnableVertexAttribArray(1);
-    glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, color));
-    glEnableVertexAttribArray(2);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbo[1]);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sphereIndices.size() * sizeof(GLuint), sphereIndices.data(), GL_STATIC_DRAW);
-
-    glBindVertexArray(vao[1]);
-    glBindBuffer(GL_ARRAY_BUFFER, vbo[2]);
-    glBufferData(GL_ARRAY_BUFFER, planet1VertexData.size() * sizeof(Vertex), planet1VertexData.data(), GL_STATIC_DRAW);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)0);
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, normal));
-    glEnableVertexAttribArray(1);
-    glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, color));
-    glEnableVertexAttribArray(2);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbo[3]);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, planet1Indices.size() * sizeof(GLuint), planet1Indices.data(), GL_STATIC_DRAW);
-
-    glBindVertexArray(vao[2]);
-    glBindBuffer(GL_ARRAY_BUFFER, vbo[4]);
-    glBufferData(GL_ARRAY_BUFFER, planet2VertexData.size() * sizeof(Vertex), planet2VertexData.data(), GL_STATIC_DRAW);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)0);
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, normal));
-    glEnableVertexAttribArray(1);
-    glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, color));
-    glEnableVertexAttribArray(2);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbo[5]);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, planet2Indices.size() * sizeof(GLuint), planet2Indices.data(), GL_STATIC_DRAW);
-
-    glBindVertexArray(vao[3]);
-    glBindBuffer(GL_ARRAY_BUFFER, vbo[6]);
-    glBufferData(GL_ARRAY_BUFFER, planet3VertexData.size() * sizeof(Vertex), planet3VertexData.data(), GL_STATIC_DRAW);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)0);
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, normal));
-    glEnableVertexAttribArray(1);
-    glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, color));
-    glEnableVertexAttribArray(2);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbo[7]);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, planet3Indices.size() * sizeof(GLuint), planet3Indices.data(), GL_STATIC_DRAW);
-
-    glBindVertexArray(vao[4]);
-    glBindBuffer(GL_ARRAY_BUFFER, vbo[8]);
-    glBufferData(GL_ARRAY_BUFFER, moon1VertexData.size() * sizeof(Vertex), moon1VertexData.data(), GL_STATIC_DRAW);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)0);
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, normal));
-    glEnableVertexAttribArray(1);
-    glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, color));
-    glEnableVertexAttribArray(2);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbo[9]);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, moon1Indices.size() * sizeof(GLuint), moon1Indices.data(), GL_STATIC_DRAW);
-
-    // 달 2
-    glBindVertexArray(vao[5]);
-    glBindBuffer(GL_ARRAY_BUFFER, vbo[10]);
-    glBufferData(GL_ARRAY_BUFFER, moon2VertexData.size() * sizeof(Vertex), moon2VertexData.data(), GL_STATIC_DRAW);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)0);
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, normal));
-    glEnableVertexAttribArray(1);
-    glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, color));
-    glEnableVertexAttribArray(2);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbo[11]);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, moon2Indices.size() * sizeof(GLuint), moon2Indices.data(), GL_STATIC_DRAW);
-
-    // 달 3
-    glBindVertexArray(vao[6]);
-    glBindBuffer(GL_ARRAY_BUFFER, vbo[12]);
-    glBufferData(GL_ARRAY_BUFFER, moon3VertexData.size() * sizeof(Vertex), moon3VertexData.data(), GL_STATIC_DRAW);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)0);
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, normal));
-    glEnableVertexAttribArray(1);
-    glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, color));
-    glEnableVertexAttribArray(2);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbo[13]);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, moon3Indices.size() * sizeof(GLuint), moon3Indices.data(), GL_STATIC_DRAW);
-
-    glBindVertexArray(0);
-}
-
-void drawPlanet(int vaoIndex, float rotateX, float rotationAngle, float distance, float scale) {
-    glm::mat4 model = glm::mat4(1.0f);
-
-    
-    model = glm::rotate(model, glm::radians(rotateX), glm::vec3(1.0f, 0.0f, 0.0f));  // 1. 궤도 기울기
-    model = glm::rotate(model, glm::radians(rotationAngle), glm::vec3(0.0f, 1.0f, 0.0f));  // 2. 공전
-
-
-    model = glm::translate(model, glm::vec3(distance, 0.0f, 0.0f));  // 3. 거리 이동
-
-    model = glm::rotate(model, glm::radians(rotateX), glm::vec3(1.0f, 0.0f, 0.0f));  // 1. 궤도 기울기
-    model = glm::rotate(model, glm::radians(rotationAngle), glm::vec3(0.0f, 1.0f, 0.0f));  // 2. 공전
-
-    model = glm::scale(model, glm::vec3(scale));  // 5. 크기 조절
-
-    model = glm::rotate(model, glm::radians(sceneRotationY), glm::vec3(0.0f, 1.0f, 0.0f));  // 4. Y축 전체 회전
-    model = glm::rotate(model, glm::radians(sceneRotationZ), glm::vec3(0.0f, 0.0f, 1.0f));  // Z축 전체 회전 추가
-    
-
-    GLuint modelLoc = glGetUniformLocation(shaderProgramID, "model");
-    glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-    glBindVertexArray(vao[vaoIndex]);
-    glDrawElements(GL_TRIANGLES, planet1Indices.size(), GL_UNSIGNED_INT, 0);
-}
-
-void drawMoon(int vaoIndex, float parentRotateX, float parentRotationAngle, float moonRotationAngle, float parentDistance, float moonDistance, float scale) {
-    glm::mat4 model = glm::mat4(1.0f);
-
-    model = glm::rotate(model, glm::radians(parentRotateX), glm::vec3(1.0f, 0.0f, 0.0f));
-    model = glm::rotate(model, glm::radians(parentRotationAngle), glm::vec3(0.0f, 1.0f, 0.0f));
-
-    model = glm::translate(model, glm::vec3(parentDistance, 0.0f, 0.0f));
-
-    model = glm::rotate(model, glm::radians(moonRotationAngle), glm::vec3(0.0f, -1.0f, 0.0f));
-    model = glm::rotate(model, -glm::radians(-parentRotateX), glm::vec3(-1.0f, 0.0f, 0.0f));
-    model = glm::rotate(model, -glm::radians(-parentRotationAngle), glm::vec3(0.0f, -1.0f, 0.0f));
-
-    model = glm::rotate(model, glm::radians(sceneRotationY), glm::vec3(0.0f, 1.0f, 0.0f));  // 4. Y축 전체 회전
-    model = glm::rotate(model, glm::radians(sceneRotationZ), glm::vec3(0.0f, 0.0f, 1.0f));  // Z축 전체 회전 추가
-
-    model = glm::translate(model, glm::vec3(moonDistance, 0.0f, 0.0f));
-
-    
-
-    model = glm::scale(model, glm::vec3(scale));
-
-    GLuint modelLoc = glGetUniformLocation(shaderProgramID, "model");
-    glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-    glBindVertexArray(vao[vaoIndex]);
-    glDrawElements(GL_TRIANGLES, moon1Indices.size(), GL_UNSIGNED_INT, 0);
-}
-
-bool isOrtho = true;  
-
-bool isSolidModel = true;
-
 float moveX = 0.0f;
-float moveY = 0.0f;
-float moveZ = 0.0f;  
-const float MOVE_SPEED = 0.1f;
+bool isMoving = false;
+float moveSpeed = 0.1f;
+int moveDirection = 1;
 
-void Keyboard(unsigned char key, int x, int y) {
-    switch (key) {
-    case 'p':
-    case 'P':
-        isOrtho = !isOrtho;  // 투영 방식 토글
-        glutPostRedisplay();
-        break;
+float rotateY = 0.0f;        
+bool isRotating = false;     
+float rotateSpeed = 2.0f;  
+int rotateDirection = 1;
 
-    case 'm':
-    case 'M':
-        isSolidModel = !isSolidModel;
-        if (isSolidModel) {
-            glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+float armRotateY = 0.0f;
+bool isArmRotating = false;
+float armRotateSpeed = 2.0f;
+
+bool isArmsMoving = false;
+bool isArmsCombined = false;
+float armsPosition = 0.0f; 
+float armsCombineSpeed = 0.02f;
+
+float armRotateZ = 0.0f;
+bool isArmRotatingZ = false;
+float armRotateSpeedZ = 2.0f;
+int armRotateDirectionZ = 1;
+
+glm::vec3 cameraPos = glm::vec3(0.0f, 5.0f, 5.0f);  
+glm::vec3 cameraTarget = glm::vec3(0.0f, 0.0f, 0.0f); 
+float cameraRotationY = 0.0f; 
+float cameraOrbitY = 0.0f;    
+float cameraMoveSpeed = 0.1f;  
+float cameraRotateSpeed = 0.1f; 
+
+// 전역 변수 추가
+bool isOrbiting = false;  // 카메라 공전 애니메이션 상태
+
+// 초기 상태 값 저장을 위한 상수 추가
+const float INITIAL_CAMERA_Y = 5.0f;
+const float INITIAL_CAMERA_Z = 5.0f;
+
+void timer(int value) {
+    if (isMoving) {
+        moveX += moveSpeed * moveDirection;
+
+        if (moveX > 2.0f) {  
+            moveX = 2.0f;
+            moveDirection = -1;
+        }
+        else if (moveX < -2.0f) { 
+            moveX = -2.0f;
+            moveDirection = 1;
+        }
+    }
+
+    if (isRotating) {
+        rotateY += rotateSpeed; 
+        if (rotateY >= 360.0f) {  
+            rotateY = 0.0f;
+        }
+    }
+
+    if (isArmRotating) {
+        armRotateY += armRotateSpeed;
+    }
+
+    if (isArmsMoving) {
+        if (isArmsCombined) {
+            armsPosition += armsCombineSpeed;
+            if (armsPosition >= 1.0f) {
+                armsPosition = 1.0f;
+                isArmsMoving = false;
+            }
         }
         else {
-            glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+            armsPosition -= armsCombineSpeed;
+            if (armsPosition <= 0.0f) {
+                armsPosition = 0.0f;
+                isArmsMoving = false;
+            }
+        }
+    }
+
+    if (isArmRotatingZ) {
+        armRotateZ += armRotateSpeedZ;
+        if (armRotateZ > 90.0f) {
+            armRotateZ = 90.0f;
+            armRotateSpeedZ = -armRotateSpeedZ;  // 방향 전환
+        }
+        else if (armRotateZ < -90.0f) {
+            armRotateZ = -90.0f;
+            armRotateSpeedZ = -armRotateSpeedZ;  // 방향 전환
+        }
+    }
+
+    if (isOrbiting) {
+        cameraOrbitY += cameraRotateSpeed;
+        if (cameraOrbitY >= 360.0f) {
+            cameraOrbitY -= 360.0f;
+        }
+        // 공전에 따른 카메라 위치 계산
+        float radius = sqrt(INITIAL_CAMERA_Z * INITIAL_CAMERA_Z + INITIAL_CAMERA_Z * INITIAL_CAMERA_Z);
+        cameraPos.x = radius * sin(glm::radians(cameraOrbitY));
+        cameraPos.z = radius * cos(glm::radians(cameraOrbitY));
+    }
+
+    glutPostRedisplay();
+    glutTimerFunc(16, timer, 0);
+}
+
+void keyboardCallback(unsigned char key, int x, int y) {
+    switch (key) {
+    case 'b': 
+        isMoving = !isMoving;
+        moveDirection = -1;
+        break;
+    case 'B':  
+        isMoving = !isMoving;
+        moveDirection = 1;
+        break;
+    case 'm': 
+        isRotating = !isRotating;
+        rotateSpeed = -2.0f;
+        break;
+    case 'M': 
+        isRotating = !isRotating;
+        rotateSpeed = 2.0f;
+        break;
+     case 'f': 
+        isArmRotating = !isArmRotating;
+        armRotateSpeed = -2.0f;
+        break;
+    case 'F':  
+        isArmRotating = !isArmRotating;
+        armRotateSpeed = 2.0f;
+        break;
+    case 'e':  
+        if (!isArmsMoving && !isArmsCombined) {
+            isArmsMoving = true;
+            isArmsCombined = true;
         }
         break;
-    case 'w':
-    case 'W':
-        moveY += MOVE_SPEED;  // 위로 이동
+    case 'E': 
+        if (!isArmsMoving && isArmsCombined) {
+            isArmsMoving = true;
+            isArmsCombined = false;
+        }
         break;
-    case 's':
-    case 'S':
-        moveY -= MOVE_SPEED;  // 아래로 이동
+    case 't':
+        isArmRotatingZ = !isArmRotatingZ;
+        armRotateSpeedZ = -2.0f;
         break;
-    case 'a':
+    case 'T':
+        isArmRotatingZ = !isArmRotatingZ;
+        armRotateSpeedZ = 2.0f;
+        break;
+    case 'z':  // z축 음의 방향으로 이동
+        cameraPos.z -= cameraMoveSpeed;
+        cameraTarget = glm::vec3(0.0f, 0.0f, 0.0f);
+        break;
+    case 'Z':  // z축 양의 방향으로 이동
+        cameraPos.z += cameraMoveSpeed;
+        cameraTarget = glm::vec3(0.0f, 0.0f, 0.0f);
+        break;
+    case 'x':  // x축 음의 방향으로 이동
+        cameraPos.x -= cameraMoveSpeed;
+        cameraTarget = glm::vec3(0.0f, 0.0f, 0.0f);
+        break;
+    case 'X':  // x축 양의 방향으로 이동
+        cameraPos.x += cameraMoveSpeed;
+        cameraTarget = glm::vec3(0.0f, 0.0f, 0.0f);
+        break;
+    case 'y':  // 카메라 기준 y축 음의 방향 회전
+        cameraRotationY -= cameraRotateSpeed;
+        model = glm::rotate(glm::mat4(1.0f), glm::radians(cameraRotationY), glm::vec3(0.0f, 1.0f, 0.0f));
+        view = glm::lookAt(cameraPos, glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+        break;
+    case 'Y':  // 카메라 기준 y축 양의 방향 회전
+        cameraRotationY += cameraRotateSpeed;
+        model = glm::rotate(glm::mat4(1.0f), glm::radians(cameraRotationY), glm::vec3(0.0f, 1.0f, 0.0f));
+        view = glm::lookAt(cameraPos, glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+        break;
+        break;
+    case 'r':  // 중심점 기준 y축 음의 방향 공전
+        cameraOrbitY -= cameraRotateSpeed;
+        // 공전에 따른 카메라 위치 계산
+        cameraPos.x = 5.0f * sin(glm::radians(cameraOrbitY));
+        cameraPos.z = 5.0f * cos(glm::radians(cameraOrbitY));
+        cameraTarget = glm::vec3(0.0f, 0.0f, 0.0f);
+        break;
+    case 'R':  // 중심점 기준 y축 양의 방향 공전
+        cameraOrbitY += cameraRotateSpeed;
+        // 공전에 따른 카메라 위치 계산
+        cameraPos.x = 5.0f * sin(glm::radians(cameraOrbitY));
+        cameraPos.z = 5.0f * cos(glm::radians(cameraOrbitY));
+        cameraTarget = glm::vec3(0.0f, 0.0f, 0.0f);
+        break;
+    case 'a':  // 공전 애니메이션 시작
     case 'A':
-        moveX -= MOVE_SPEED;  // 왼쪽으로 이동
+        isOrbiting = !isOrbiting;
         break;
-    case 'd':
-    case 'D':
-        moveX += MOVE_SPEED;  // 오른쪽으로 이동
+    case 's':  // 모든 움직임 멈추기
+    case 'S':
+        isMoving = false;
+        isRotating = false;
+        isArmRotating = false;
+        isArmRotatingZ = false;
+        isOrbiting = false;
         break;
-    case '+':
-        moveZ += MOVE_SPEED;  // 앞으로 이동
+    case 'c':  // 모든 움직임 초기화
+    case 'C':
+        // 위치 초기화
+        moveX = 0.0f;
+        isMoving = false;
+        moveDirection = 1;
+
+        // 회전 초기화
+        rotateY = 0.0f;
+        isRotating = false;
+        rotateSpeed = 2.0f;
+        rotateDirection = 1;
+
+        // 팔 회전 초기화
+        armRotateY = 0.0f;
+        isArmRotating = false;
+        armRotateSpeed = 2.0f;
+
+        // Z축 회전 초기화
+        armRotateZ = 0.0f;
+        isArmRotatingZ = false;
+        armRotateSpeedZ = 2.0f;
+
+        // 팔 합체 상태 초기화
+        isArmsMoving = false;
+        isArmsCombined = false;
+        armsPosition = 0.0f;
+
+        // 카메라 초기화
+        cameraPos = glm::vec3(0.0f, INITIAL_CAMERA_Y, INITIAL_CAMERA_Z);
+        cameraTarget = glm::vec3(0.0f, 0.0f, 0.0f);
+        cameraRotationY = 0.0f;
+        cameraOrbitY = 0.0f;
+        isOrbiting = false;
         break;
-    case '-':
-        moveZ -= MOVE_SPEED;  // 뒤로 이동
-        break;
-    case 'y':
-        isRotatingPositive = !isRotatingPositive;
-        isRotatingNegative = false;
-        break;
-    case 'Y':
-        isRotatingNegative = !isRotatingNegative;
-        isRotatingPositive = false;
-        break;
-    case 'z':
-        isRotatingZPositive = !isRotatingZPositive;
-        isRotatingZNegative = false;
-        break;
-    case 'Z':
-        isRotatingZNegative = !isRotatingZNegative;
-        isRotatingZPositive = false;
+    case 'Q':  // 프로그램 종료
+        glutLeaveMainLoop();  // 또는 exit(0);
         break;
     }
     glutPostRedisplay();
 }
 
 void drawScene() {
-    //glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
-    glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    glUseProgram(shaderProgramID);
-    glEnable(GL_DEPTH_TEST);
 
-    if (isOrtho) {
-        projection = glm::ortho(-2.0f, 2.0f, -2.0f, 2.0f, 0.1f, 50.0f);
-    }
-    else {
-        projection = glm::perspective(glm::radians(45.0f), (float)width / (float)height, 0.1f, 50.0f);
-    }
+    projection = glm::perspective(glm::radians(45.0f), (float)width / (float)height, 0.1f, 50.0f);
 
-    view = glm::lookAt(glm::vec3(15.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-    view = glm::translate(view, glm::vec3(moveX, moveY, moveZ));
+    glm::vec3 cameraDirection;
+    model = glm::rotate(glm::mat4(1.0f), glm::radians(cameraRotationY), glm::vec3(0.0f, 1.0f, 0.0f));
+    cameraDirection = glm::vec3(model * glm::vec4(cameraTarget - cameraPos, 0.0f));
+
+    glm::vec3 cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);
+
+    view = glm::lookAt(cameraPos, cameraPos + cameraDirection, cameraUp);
 
     GLuint modelLoc = glGetUniformLocation(shaderProgramID, "model");
     GLuint viewLoc = glGetUniformLocation(shaderProgramID, "view");
     GLuint projectionLoc = glGetUniformLocation(shaderProgramID, "projection");
-    GLuint lightPosLoc = glGetUniformLocation(shaderProgramID, "lightPos");
 
     glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
     glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, glm::value_ptr(projection));
-    glUniform3f(lightPosLoc, 5.0f, 5.0f, 5.0f);
 
-    // Y축 회전이 적용된 기본 model 행렬
-    glm::mat4 baseModel = glm::rotate(glm::mat4(1.0f), glm::radians(sceneRotationY), glm::vec3(0.0f, 1.0f, 0.0f));
+    // 빨간 큐브 그리기
+    glBindVertexArray(vao[0]);
+    model = glm::mat4(1.0f);
+    model = glm::rotate(model, glm::radians(rotateY), glm::vec3(0.0f, 1.0f, 0.0f));  // 먼저 회전
+    model = glm::translate(model, glm::vec3(moveX - 0.5f, 0.0f, -0.5f));  // 그 다음 이동
+    model = glm::scale(model, glm::vec3(1.0f, 0.5f, 1.0f));
+    glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+    glDrawElements(GL_TRIANGLES, cube1Indices.size(), GL_UNSIGNED_INT, 0);
 
-    // 축 그리기
-    glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(baseModel));
+    // 노란 큐브 그리기
+    glBindVertexArray(vao[1]);
+    model = glm::mat4(1.0f);
+    model = glm::rotate(model, glm::radians(rotateY), glm::vec3(0.0f, 1.0f, 0.0f));
+    model = glm::translate(model, glm::vec3(moveX - 0.25f, 0.5f, -0.25f));
+    model = glm::scale(model, glm::vec3(0.5f, 0.5f, 0.5f));
+    glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+    glDrawElements(GL_TRIANGLES, cube2Indices.size(), GL_UNSIGNED_INT, 0);
+
+    float leftArmPosition = -0.4f * (1.0f - armsPosition);   // 왼쪽 팔 시작 위치
+    float rightArmPosition = 0.2f * (1.0f - armsPosition);   // 오른쪽 팔 시작 위치
+
+    glBindVertexArray(vao[2]);
+    model = glm::mat4(1.0f);
+    model = glm::rotate(model, glm::radians(rotateY), glm::vec3(0.0f, 1.0f, 0.0f));  // 몸체 회전
+    model = glm::rotate(model, glm::radians(armRotateY * (1.0f - armsPosition)), glm::vec3(0.0f, 1.0f, 0.0f));  // 팔 회전
+    model = glm::translate(model, glm::vec3(moveX + leftArmPosition, 0.1f, -0.25f));
+    model = glm::scale(model, glm::vec3(0.25f, 0.25f, 1.2f));
+    glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+    glDrawElements(GL_TRIANGLES, cube3Indices.size(), GL_UNSIGNED_INT, 0);
+
+    glBindVertexArray(vao[3]);
+    model = glm::mat4(1.0f);
+    model = glm::rotate(model, glm::radians(rotateY), glm::vec3(0.0f, 1.0f, 0.0f));  // 몸체 회전
+    model = glm::rotate(model, glm::radians(-armRotateY * (1.0f - armsPosition)), glm::vec3(0.0f, 1.0f, 0.0f));  // 반대 방향 팔 회전
+    model = glm::translate(model, glm::vec3(moveX + rightArmPosition, 0.1f, -0.25f));
+    model = glm::scale(model, glm::vec3(0.25f, 0.25f, 1.2f));
+    glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+    glDrawElements(GL_TRIANGLES, cube4Indices.size(), GL_UNSIGNED_INT, 0);
+
+
+    glBindVertexArray(vao[4]);
+    model = glm::mat4(1.0f);
+    model = glm::rotate(model, glm::radians(rotateY), glm::vec3(0.0f, 1.0f, 0.0f));
+    model = glm::translate(model, glm::vec3(moveX - 0.2f, 0.8f, -0.2f));
+    model = glm::rotate(model, glm::radians(armRotateZ), glm::vec3(0.0f, 0.0f, 1.0f));  // Z축 회전 추가
+    model = glm::scale(model, glm::vec3(0.1f, 0.5f, 0.1f));
+    glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+    glDrawElements(GL_TRIANGLES, cube5Indices.size(), GL_UNSIGNED_INT, 0);
+
+    glBindVertexArray(vao[5]);
+    model = glm::mat4(1.0f);
+    model = glm::rotate(model, glm::radians(rotateY), glm::vec3(0.0f, 1.0f, 0.0f));
+    model = glm::translate(model, glm::vec3(moveX + 0.1f, 0.8f, -0.2f));
+    model = glm::rotate(model, glm::radians(-armRotateZ), glm::vec3(0.0f, 0.0f, 1.0f));  // 반대 방향 Z축 회전 추가
+    model = glm::scale(model, glm::vec3(0.1f, 0.5f, 0.1f));
+    glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+    glDrawElements(GL_TRIANGLES, cube6Indices.size(), GL_UNSIGNED_INT, 0);
+
+
+    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+    model = glm::mat4(1.0f);
+    glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
     glBindVertexArray(axisVAO);
     glDrawArrays(GL_LINES, 0, 6);
-
-    // 중앙 구체 그리기
-    glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(baseModel));
-    glBindVertexArray(vao[0]);
-    glDrawElements(GL_TRIANGLES, sphereIndices.size(), GL_UNSIGNED_INT, 0);
-
-    // drawPlanet 함수 수정 필요 - Y축 회전 적용
-    glm::mat4 planetModel;
-
-    // 행성 그리기
-    drawPlanet(1, 0.0f, rotationAngle1, 2.5f, 0.3f);     // 첫 번째 행성
-    drawPlanet(2, 45.0f, rotationAngle2, 2.5f, 0.3f);    // 두 번째 행성
-    drawPlanet(3, -45.0f, rotationAngle3, 2.5f, 0.3f);   // 세 번째 행성
-
-    // 달들과 궤도도 동일한 방식으로 baseModel 적용
-    drawMoon(4, 0.0f, rotationAngle1, moonRotationAngle1, 2.5f, 0.5f, 0.1f);
-    drawMoon(5, 45.0f, rotationAngle2, moonRotationAngle2, 2.5f, 0.5f, 0.1f);
-    drawMoon(6, -45.0f, rotationAngle3, moonRotationAngle3, 2.5f, 0.5f, 0.1f);
-
-    glUniform3f(glGetUniformLocation(shaderProgramID, "objectColor"), 1.0f, 1.0f, 1.0f);
-    drawOrbitPaths();
-
-    // 솔리드/와이어프레임 모드 설정
-    if (isSolidModel) {
-        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-    }
-    else {
-        glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-    }
+    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
     glutSwapBuffers();
-
-    // 회전 각도 업데이트
-    rotationAngle1 += 0.01f;
-    rotationAngle2 += 0.02f;
-    rotationAngle3 += 0.03f;
-    moonRotationAngle1 += 0.01f;
-    moonRotationAngle2 += 0.02f;
-    moonRotationAngle3 += 0.03f;
-
-    if (isRotatingPositive) {
-        sceneRotationY += 0.05f;
-    }
-    if (isRotatingNegative) {
-        sceneRotationY -= 0.05f;
-    }
-
-    if (isRotatingZPositive) {
-        sceneRotationZ += 0.05f;  // 0.01f에서 증가
-    }
-    if (isRotatingZNegative) {
-        sceneRotationZ -= 0.05f;  // 0.01f에서 증가
-    }
-
-    glutPostRedisplay();
 }
 
 GLvoid Reshape(int w, int h) {
@@ -729,44 +688,37 @@ GLvoid Reshape(int w, int h) {
     glViewport(0, 0, w, h);
 }
 
-
-
 int main(int argc, char** argv) {
     glutInit(&argc, argv);
     glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGBA | GLUT_DEPTH);
-    glutInitWindowPosition(50, 50);
-    glutInitWindowSize(width, height);
-    glutCreateWindow("Sphere Example");
+    glutInitWindowPosition(100, 100);
+    glutInitWindowSize(800,600);
+    glutCreateWindow("Three Cubes with Axes");
     glewExperimental = GL_TRUE;
     if (glewInit() != GLEW_OK) {
         std::cerr << "Failed to initialize GLEW" << std::endl;
         return -1;
     }
 
-    initSphereColors();
-    read_obj_file<958, 3>("sphere.obj", sphereVertexData, sphereIndices, sphereColors);
-
-
-    initPlanetColors();
-    read_obj_file<958, 3>("sphere.obj", planet1VertexData, planet1Indices, planetColors);
-    read_obj_file<958, 3>("sphere.obj", planet2VertexData, planet2Indices, planetColors);
-    read_obj_file<958, 3>("sphere.obj", planet3VertexData, planet3Indices, planetColors);
-
-    initMoonColors(); 
-    read_obj_file<958, 3>("sphere.obj", moon1VertexData, moon1Indices, moonColors);
-    read_obj_file<958, 3>("sphere.obj", moon2VertexData, moon2Indices, moonColors);
-    read_obj_file<958, 3>("sphere.obj", moon3VertexData, moon3Indices, moonColors);
+    read_obj_file("cube.obj", cube1VertexData, cube1Indices, face1Colors);
+    read_obj_file("cube.obj", cube2VertexData, cube2Indices, face2Colors);
+    read_obj_file("cube.obj", cube3VertexData, cube3Indices, face3Colors);  
+    read_obj_file("cube.obj", cube4VertexData, cube4Indices, face4Colors);
+    read_obj_file("cube.obj", cube5VertexData, cube5Indices, face5Colors);
+    read_obj_file("cube.obj", cube6VertexData, cube6Indices, face6Colors);
 
     make_shaderProgram();
     InitBuffer();
     initAxes();
-    initOrbitPath();
-    
-    glutKeyboardFunc(Keyboard);
+
     glEnable(GL_DEPTH_TEST);
 
     glutDisplayFunc(drawScene);
     glutReshapeFunc(Reshape);
+
+    glutKeyboardFunc(keyboardCallback); 
+    glutTimerFunc(0, timer, 0);         
+
     glutMainLoop();
 
     return 0;
