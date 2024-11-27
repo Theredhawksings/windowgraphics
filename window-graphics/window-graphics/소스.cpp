@@ -515,14 +515,9 @@ void keyboardCallback(unsigned char key, int x, int y) {
         break;
     case 'y':  // 카메라 기준 y축 음의 방향 회전
         cameraRotationY -= cameraRotateSpeed;
-        model = glm::rotate(glm::mat4(1.0f), glm::radians(cameraRotationY), glm::vec3(0.0f, 1.0f, 0.0f));
-        view = glm::lookAt(cameraPos, glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
         break;
     case 'Y':  // 카메라 기준 y축 양의 방향 회전
         cameraRotationY += cameraRotateSpeed;
-        model = glm::rotate(glm::mat4(1.0f), glm::radians(cameraRotationY), glm::vec3(0.0f, 1.0f, 0.0f));
-        view = glm::lookAt(cameraPos, glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-        break;
         break;
     case 'r':  // 중심점 기준 y축 음의 방향 공전
         cameraOrbitY -= cameraRotateSpeed;
@@ -592,28 +587,8 @@ void keyboardCallback(unsigned char key, int x, int y) {
     glutPostRedisplay();
 }
 
-void drawScene() {
-    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+void drawCubes(GLuint modelLoc) {
 
-    projection = glm::perspective(glm::radians(45.0f), (float)width / (float)height, 0.1f, 50.0f);
-
-    glm::vec3 cameraDirection;
-    model = glm::rotate(glm::mat4(1.0f), glm::radians(cameraRotationY), glm::vec3(0.0f, 1.0f, 0.0f));
-    cameraDirection = glm::vec3(model * glm::vec4(cameraTarget - cameraPos, 0.0f));
-
-    glm::vec3 cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);
-
-    view = glm::lookAt(cameraPos, cameraPos + cameraDirection, cameraUp);
-
-    GLuint modelLoc = glGetUniformLocation(shaderProgramID, "model");
-    GLuint viewLoc = glGetUniformLocation(shaderProgramID, "view");
-    GLuint projectionLoc = glGetUniformLocation(shaderProgramID, "projection");
-
-    glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
-    glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, glm::value_ptr(projection));
-
-    // 빨간 큐브 그리기
     glBindVertexArray(vao[0]);
     model = glm::mat4(1.0f);
     model = glm::rotate(model, glm::radians(rotateY), glm::vec3(0.0f, 1.0f, 0.0f));  // 먼저 회전
@@ -670,14 +645,59 @@ void drawScene() {
     model = glm::scale(model, glm::vec3(0.1f, 0.5f, 0.1f));
     glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
     glDrawElements(GL_TRIANGLES, cube6Indices.size(), GL_UNSIGNED_INT, 0);
+}
 
-
+void drawAxes(GLuint modelLoc) {
     glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
     model = glm::mat4(1.0f);
     glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
     glBindVertexArray(axisVAO);
     glDrawArrays(GL_LINES, 0, 6);
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+}
+
+void drawScene() {
+    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    GLuint modelLoc = glGetUniformLocation(shaderProgramID, "model");
+    GLuint viewLoc = glGetUniformLocation(shaderProgramID, "view");
+    GLuint projectionLoc = glGetUniformLocation(shaderProgramID, "projection");
+
+    // 뷰포트 1: 원근 투영
+    glViewport(0, 0, width / 2, height);
+    projection = glm::perspective(glm::radians(45.0f), (float)width / (float)height, 0.1f, 50.0f);
+    glm::mat4 cameraRotation = glm::rotate(glm::mat4(1.0f), glm::radians(cameraRotationY), glm::vec3(0.0f, 1.0f, 0.0f));
+    glm::vec3 cameraDirection = glm::normalize(cameraTarget - cameraPos);
+    glm::vec3 rotatedCameraDirection = glm::vec3(cameraRotation * glm::vec4(cameraDirection, 0.0f));
+    view = glm::lookAt(cameraPos, cameraPos + rotatedCameraDirection, glm::vec3(0.0f, 1.0f, 0.0f));
+    glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, glm::value_ptr(projection));
+    glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
+
+    // 뷰포트 1에 장면 그리기
+    drawCubes(modelLoc);
+    drawAxes(modelLoc);
+
+    // 뷰포트 2: 직각 투영 (xz 평면)  
+    glViewport(width / 2, height / 2, width / 2, height / 2);
+    projection = glm::ortho(-5.0f, 5.0f, -5.0f, 5.0f, 0.1f, 50.0f);
+    view = glm::lookAt(glm::vec3(0.0f, 10.0f, 0.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, -1.0f));
+    glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, glm::value_ptr(projection));
+    glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
+
+    // 뷰포트 2에 장면 그리기 
+    drawCubes(modelLoc);
+    drawAxes(modelLoc);
+
+    // 뷰포트 3: 직각 투영 (xy 평면)
+    glViewport(width / 2, 0, width / 2, height / 2);
+    view = glm::lookAt(glm::vec3(0.0f, 0.0f, 10.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+    glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, glm::value_ptr(projection));
+    glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
+
+    // 뷰포트 3에 장면 그리기
+    drawCubes(modelLoc);
+    drawAxes(modelLoc);
 
     glutSwapBuffers();
 }
@@ -685,7 +705,10 @@ void drawScene() {
 GLvoid Reshape(int w, int h) {
     width = w;
     height = h;
-    glViewport(0, 0, w, h);
+
+    glViewport(0, 0, w / 2, h);  
+    glViewport(w / 2, 0, w / 2, h / 2);   
+    glViewport(w / 2, h / 2, w / 2, h / 2); 
 }
 
 int main(int argc, char** argv) {
