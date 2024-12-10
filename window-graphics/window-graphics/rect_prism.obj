@@ -1,0 +1,43 @@
+# rectangular_prism.obj - Simple rectangular prism made of triangles
+
+# Vertices
+v -1.0 -1.0 -1.0  # 1: left back bottom
+v  1.0 -1.0 -1.0  # 2: right back bottom 
+v  1.0  1.0 -1.0  # 3: right back top
+v -1.0  1.0 -1.0  # 4: left back top
+v -1.0 -1.0  1.0  # 5: left front bottom
+v  1.0 -1.0  1.0  # 6: right front bottom
+v  1.0  1.0  1.0  # 7: right front top
+v -1.0  1.0  1.0  # 8: left front top
+
+# Vertex Normals
+vn  0.0  0.0  1.0   # front normal
+vn  0.0  0.0 -1.0   # back normal
+vn  0.0  1.0  0.0   # top normal
+vn  0.0 -1.0  0.0   # bottom normal
+vn  1.0  0.0  0.0   # right normal
+vn -1.0  0.0  0.0   # left normal
+
+# Front face triangles
+f 5//1 6//1 7//1    # front triangle 1
+f 5//1 7//1 8//1    # front triangle 2
+
+# Back face triangles
+f 1//2 3//2 2//2    # back triangle 1
+f 1//2 4//2 3//2    # back triangle 2
+
+# Top face triangles
+f 4//3 8//3 7//3    # top triangle 1
+f 4//3 7//3 3//3    # top triangle 2
+
+# Bottom face triangles
+f 1//4 2//4 6//4    # bottom triangle 1
+f 1//4 6//4 5//4    # bottom triangle 2
+
+# Right face triangles
+f 2//5 3//5 7//5    # right triangle 1
+f 2//5 7//5 6//5    # right triangle 2
+
+# Left face triangles
+f 1//6 5//6 8//6    # left triangle 1
+f 1//6 8//6 4//6    # left triangle 2
