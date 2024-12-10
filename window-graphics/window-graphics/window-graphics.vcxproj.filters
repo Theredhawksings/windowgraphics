@@ -26,5 +26,11 @@
     <None Include="vertex.glsl">
       <Filter>소스 파일</Filter>
     </None>
+    <None Include="background_vertex.glsl">
+      <Filter>소스 파일</Filter>
+    </None>
+    <None Include="background_fragment.glsl">
+      <Filter>소스 파일</Filter>
+    </None>
   </ItemGroup>
 </Project>
